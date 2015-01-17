@@ -38,6 +38,7 @@ from passwords import DB_SERVER, DB_PORT, DB_LOGIN, DB_PASSWORD, DB_TABLE
 
 from configobj import ConfigObj
 config = ConfigObj("/etc/faforever/faforever.conf")
+fafbot_config = ConfigObj("fafbot.conf")
 
 from threading import Timer
 from trueSkill.GameInfo import GameInfo
@@ -140,8 +141,8 @@ class BotModeration(ircbot.SingleServerIRCBot):
         # FIXME: hardcoded ip
         ircbot.SingleServerIRCBot.__init__(self, [("37.58.123.2", 6667)],
                                            "fafbot", "FAF bot")
-        self.nickpass = "fafbotthegreat"
-        self.nickname = "fafbot"
+        self.nickpass = fafbot_config['nickpass']
+        self.nickname = fafbot_config['nickname']
 
         self.db = QtSql.QSqlDatabase.addDatabase("QMYSQL")
         self.db.setHostName(DB_SERVER)  
