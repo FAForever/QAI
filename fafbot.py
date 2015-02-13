@@ -412,7 +412,7 @@ class BotModeration(ircbot.SingleServerIRCBot):
                             date = t.split("T")
                             hour = date[1].replace("Z", "")
 
-                            self.connection.privmsg("#aeolus", "%s - %s - %slivestream/?channel=%s Since %s (%i viewers) " % (stream["channel"]["display_name"], stream["channel"]["status"], config['global']['www_url'], stream["channel"]["display_name"], hour, stream["viewers"]))
+                            self.connection.privmsg("#aeolus", "%s - %s - %s Since %s (%i viewers) " % (stream["channel"]["display_name"], stream["channel"]["status"], stream["channel"]["url"], hour, stream["viewers"]))
                         for stream in streams_hitbox["livestream"]:
                             self.connection.privmsg("#aeolus", "%s - %s - %s Since %s (%s viewers) " % (stream["media_display_name"], stream["media_status"], stream["channel"]["channel_link"], stream["media_live_since"], stream["media_views"]))
                     else:
