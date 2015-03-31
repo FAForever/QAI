@@ -22,13 +22,10 @@
 import sys    # sys.setdefaultencoding is cancelled by site.py
 reload(sys)    # to re-enable sys.setdefaultencoding()
 sys.setdefaultencoding('utf-8')
-import urllib2
 from irc import bot as ircbot
-from irc import client
 from irc.bot import Channel
 import time
-from PySide import QtSql, QtCore
-import re
+from PySide import QtSql
 
 from fractions import Fraction
 from twitch import *
