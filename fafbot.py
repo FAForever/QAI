@@ -38,7 +38,7 @@ from passwords import DB_SERVER, DB_PORT, DB_LOGIN, DB_PASSWORD, DB_TABLE
 
 from configobj import ConfigObj
 config = ConfigObj("/etc/faforever/faforever.conf")
-fafbot_config = ConfigObj("fafbot.conf")
+fafbot_config = ConfigObj("fafbot.conf")['fafbot']
 
 from threading import Timer
 from trueSkill.GameInfo import GameInfo
