@@ -38,11 +38,6 @@ config = ConfigObj("/etc/faforever/faforever.conf")
 fafbot_config = ConfigObj("fafbot.conf")['fafbot']
 
 from threading import Timer
-from trueSkill.GameInfo import GameInfo
-from trueSkill.TrueSkill.FactorGraphTrueSkillCalculator import FactorGraphTrueSkillCalculator
-from trueSkill.Team import Team
-from trueSkill.Rating import Rating
-from trueSkill.Teams import Teams
 
 TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=" #add the game name at the end of the link (space = "+", eg: Game+Name)
 STREAMER_INFO  = "https://api.twitch.tv/kraken/streams/" #add streamer name at the end of the link
@@ -304,80 +299,6 @@ class BotModeration(ircbot.SingleServerIRCBot):
                 return None
         except:
             return None
-
-    def getBalanceIndex(self, uid):
-        try:
-            query = QtSql.QSqlQuery(self.db)
-            #print "checking game", uid
-            query.prepare("SELECT playerId, mean, deviation FROM `game_player_stats` WHERE `gameId` = ?")
-            query.addBindValue(uid)
-            query.exec_()
-            if query.size() == 2:
-                query.first()
-                playeruid = int(query.value(0))
-                mean = float(query.value(1))
-                dev = float(query.value(2))
-                rating1 = mean - 3.0 * dev
-                team1 = Team()
-                #print "rating1", rating1 
-                team1.addPlayer(str(playeruid), Rating(mean, dev))  
-                mostProbableWinner = playeruid  
-                
-                query.next()        
-                playeruid = int(query.value(0))
-                mean = float(query.value(1))
-                dev = float(query.value(2))
-                rating2 = mean - 3.0 * dev
-                #print "rating1", rating2
-                team2 = Team()
-                team2.addPlayer(str(playeruid), Rating(mean, dev))
-    
-                teams = Teams.concat(team1, team2)
-    
-                gameInfo = GameInfo()
-                calculator = FactorGraphTrueSkillCalculator()
-                odds = calculator.calculateMatchQuality(gameInfo, teams)
-    
-                if rating1 < rating2 :
-                    mostProbableWinner = playeruid
-                
-                return mostProbableWinner, odds
-            return 1, 1
-        except:
-            return None
-                                
-    def getMatches(self, uid):
-        try:
-            query = QtSql.QSqlQuery(self.db)
-            query.prepare("SELECT game_stats.id, startTime, gameName FROM `game_player_stats` \
-    LEFT JOIN game_stats on game_stats.id = game_player_stats.gameId \
-    WHERE `playerId` = ? \
-    AND gameMod = 6 \
-    AND startTime > (NOW() - INTERVAL 30 MINUTE) \
-    AND EndTime IS NULL ")
-            query.addBindValue(uid)
-            query.exec_()
-            if query.size() > 0:
-                query.first()
-                uid = int(query.value(0))
-                startTime = query.value(1).toTime_t()
-                name = str(query.value(2))
-                mostProbableWinner, odds = self.getBalanceIndex(uid)
-                return betmatch(uid, startTime, name, odds, mostProbableWinner)
-            else :
-                return None
-        except:
-            return None
-
-    def addToBalance(self, amount, uid):
-        try:
-            query = QtSql.QSqlQuery(self.db)
-            query.prepare("UPDATE faf_lobby.bet SET amount = amount + ? WHERE userid = ?")
-            query.addBindValue(amount)
-            query.addBindValue(uid)
-            query.exec_()
-        except:
-            pass
 
     def updateBalance(self, amount, uid):
         try:
