@@ -20,3 +20,7 @@ in [the server repo](https://github.com/FAForever/server).
 ## Usage
 
     python fafbot.py
+
+## Running the tests
+
+    py.test tests/
