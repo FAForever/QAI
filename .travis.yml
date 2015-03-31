@@ -1,0 +1,16 @@
+language: python
+
+python:
+  - "2.7"
+
+install:
+  - cp fafbot.conf.example fafbot.conf
+  - wget https://raw.githubusercontent.com/FAForever/server/develop/passwords.py.example -O passwords.py
+  - pip install -r requirements.txt
+  - pip install pytest-cov python-coveralls
+
+script:
+  - py.test tests --cov-report term-missing --cov=. --cov=challonge --cov=stats --cov=steam --cov=teams --cov=tournament --cov=updater
+
+after_success:
+  - coveralls
