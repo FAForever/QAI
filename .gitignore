@@ -1,3 +1,4 @@
 passwords.py
 *.pyc
 fafbot.conf
+.coverage
