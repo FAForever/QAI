@@ -27,7 +27,6 @@ from irc.bot import Channel
 import time
 from PySide import QtSql
 
-from fractions import Fraction
 from twitch import *
 import json
 
@@ -37,38 +36,10 @@ from configobj import ConfigObj
 config = ConfigObj("/etc/faforever/faforever.conf")
 fafbot_config = ConfigObj("fafbot.conf")['fafbot']
 
-from threading import Timer
-
 TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=" #add the game name at the end of the link (space = "+", eg: Game+Name)
 STREAMER_INFO  = "https://api.twitch.tv/kraken/streams/" #add streamer name at the end of the link
 GAME = "Supreme+Commander:+Forged+Alliance"
 HITBOX_STREAMS = "https://www.hitbox.tv/api/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
-
-class bettingSystem(object):
-    def __init__(self):
-        self.matches = {}
-
-    def addMatch(self, match):
-        try:
-            if not match.uid in self.matches:
-                self.matches[match.uid] = match
-            return self.matches[match.uid]
-        except:
-            return None
-
-    def getMatches(self):
-        try:
-            return self.matches
-        except:
-            return None
-
-    def deleteMatch(self, uid):
-        try:
-            if uid in self.matches:
-                del self.matches[uid]
-        except:
-            pass
-
 
 class BotModeration(ircbot.SingleServerIRCBot):
     def __init__(self):
@@ -91,169 +62,9 @@ class BotModeration(ircbot.SingleServerIRCBot):
         self.db.open()
         self.db.setConnectOptions("MYSQL_OPT_RECONNECT = 1")
 
-        self.betting = bettingSystem()
         self.info = Information(TWITCH_STREAMS, GAME, STREAMER_INFO)
         self.askForCast = 0
         self.askForYoutube = 0
-
-        Timer(30, self.betCheck).start()
-
-    def isOver(self, uid):
-        try:
-            query = QtSql.QSqlQuery(self.db)
-            query.prepare("SELECT * FROM `game_stats` WHERE `id` = ? AND EndTime IS NOT NULL ")
-            query.addBindValue(uid)
-            query.exec_()
-            if query.size() > 0:
-                query.first()
-                query.clear()
-                return True
-            return False
-        except:
-            return False
-
-    def getWinner(self, uid):
-        try:
-            query = QtSql.QSqlQuery(self.db)
-            query.prepare("SELECT `playerId`, score FROM `game_player_stats` WHERE `gameId` = ?")
-            query.addBindValue(uid)
-            query.exec_()
-            results = {}
-            if query.size() > 0:
-                while query.next():
-                    player = int(query.value(0))
-                    score = int(query.value(1))
-                    results[score] = player
-
-                return results[max(results)]
-            return None
-        except:
-            return None
-
-    def getNameFromUid(self, uid):
-        try:
-            query = QtSql.QSqlQuery(self.db)
-            query.prepare("(SELECT login FROM faf_lobby.login WHERE id = ? )")
-            query.addBindValue(uid)
-            query.exec_()
-            if query.size() > 0:
-                query.first()
-                val = str(query.value(0))
-                query.clear()
-                return val
-            else:
-                return None     
-        except:
-            return None   
-
-    def getOdds(self, match):
-        try:
-            odds = match.odds 
-            text = "Odds are %0.2f to 1 in favor of %s" % (Fraction(1.0/odds), self.getNameFromUid(match.mostProbableWinner))
-            return text
-        except:
-            return ''
-
-    def betCheck(self):
-        try:
-        
-            matches = self.betting.getMatches()
-            matchsToDelete = []
-            for uid in matches:
-                #print "checking", uid
-                if self.isOver(uid):
-                    #print "game is over"
-                    winnerUid = self.getWinner(uid)
-                    match = matches[uid]
-                    odds = match.odds
-                    ratio = 0
-                    #print "winner is", winnerUid
-                    #print "most probable winner was", match.mostProbableWinner  
-                    if match.mostProbableWinner == winnerUid:
-                        #the most probable winner is the winner, so the odds are in defavor of the winner.
-                        ratio = odds
-                    else:
-                        # we are defeating the odd !
-                        ratio = 1.0 + (1.0-odds)
-
-                    betWinners = match.getBetWinners(winnerUid)
-                    winnerSize = len(betWinners)
-                    loserSize = len(match.players) - winnerSize
-                    
-                    #print "winners :", winnerUid
-                    if betWinners:
-                        text = []
-
-                        for betwinnerUid in betWinners:
-                            reward = match.getReward(betwinnerUid) 
-                            reward = reward + reward * ratio
-                            self.addToBalance(reward, betwinnerUid)
-                            text = ("%s has won %i on the match \"%s\" (winner was %s). He has now %i credits.") % (self.getNameFromUid(betwinnerUid), reward, match.name, self.getNameFromUid(winnerUid), self.currentBalance(betwinnerUid))
-                            self.connection.privmsg("#aeolus", text)
-                    else :
-                        text = ("no gambler win a bet for %s! (winner of the match was %s)" % (match.name, self.getNameFromUid(winnerUid)))
-                        self.connection.privmsg("#aeolus", text)
-
-                    text = ("%i gambler(s) for the winner, %i for the loser.") % (winnerSize, loserSize)
-                    self.connection.privmsg("#aeolus", text)
-                    matchsToDelete.append(uid)
-                    
-            for uid in matchsToDelete:
-                self.betting.deleteMatch(uid)
-
-            Timer(30, self.betCheck).start()
-        except:
-
-            Timer(30, self.betCheck).start()
-
-
-    def currentBalance(self, uid):
-        try:
-            query = QtSql.QSqlQuery(self.db)
-            query.prepare("SELECT amount FROM faf_lobby.bet WHERE userid = ?")
-            query.addBindValue(uid)
-            query.exec_()
-            if query.size() == 0:
-                query3 = QtSql.QSqlQuery(self.db)
-                query3.prepare("INSERT INTO `bet`(`userid`, `amount`) VALUES (?,100)")
-                query3.addBindValue(uid)
-                query3.exec_()
-                query.clear()
-                query3.clear()
-                return 100
-            else:
-                query.first()
-                val = query.value(0)
-                if val:
-                    return int(val)
-                else:
-                    return 0
-        except:
-            return 0
-
-    def getUid(self, nickname):
-        try:
-            query = QtSql.QSqlQuery(self.db)
-            query.prepare("(SELECT id FROM faf_lobby.login WHERE login = ? )")
-            query.addBindValue(nickname)
-            query.exec_()
-            if query.size() > 0:
-                query.first()
-                return int(query.value(0))
-            else:
-                return None
-        except:
-            return None
-
-    def updateBalance(self, amount, uid):
-        try:
-            query = QtSql.QSqlQuery(self.db)
-            query.prepare("UPDATE faf_lobby.bet SET amount = ? WHERE userid = ?")
-            query.addBindValue(amount)
-            query.addBindValue(uid)
-            query.exec_()
-        except:
-            pass
 
     def on_pubmsg(self, c, e):
         try:
