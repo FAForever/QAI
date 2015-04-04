@@ -44,61 +44,6 @@ STREAMER_INFO  = "https://api.twitch.tv/kraken/streams/" #add streamer name at t
 GAME = "Supreme+Commander:+Forged+Alliance"
 HITBOX_STREAMS = "https://www.hitbox.tv/api/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
 
-class betmatch(object):
-    def __init__(self, uid, startTime, name, odds, mostProbableWinner):
-        try:
-            self.uid = uid
-            self.startTime = startTime
-            self.pot = 0
-            self.players = {}
-            self.betOn = {}
-            self.name = name
-            self.odds = odds
-            self.mostProbableWinner = mostProbableWinner
-        except:
-            pass
-            
-
-    def computeReward(self, amount):
-        try:
-            maxTime = (30.0 * 60.0)
-            minTime = (2 * 60)
-            if (time.time() - self.startTime) > minTime:
-                return amount*(1.0-((time.time() - self.startTime) / maxTime))
-            else:
-                return amount
-        except:
-            return 0
-
-    def addBeter(self, amount, uid, betUid):
-        try:
-            maxBet = self.computeReward(amount)
-            if not uid in self.players :
-                self.players[uid] = maxBet
-            if not betUid in self.betOn:
-                self.betOn[betUid] =  []
-            self.betOn[betUid].append(uid)
-            return maxBet
-        except:
-            return 0
-
-    def getBetWinners(self, uid):
-        try:
-            if uid in self.betOn :
-                return self.betOn[uid]
-            else:
-                return []
-        except:
-            return []
-
-    def getReward(self, uid):
-        try:
-            if uid in self.players:
-                return self.players[uid]
-            return 0
-        except:
-            return 0
-
 class bettingSystem(object):
     def __init__(self):
         self.matches = {}
