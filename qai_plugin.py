@@ -35,10 +35,7 @@ class Plugin(object):
 
     @irc3.event(irc3.rfc.JOIN)
     def on_join(self, channel, mask):
-        if channel == '#aeolus':
-            self.bot.part('#aeolus')
-            return
-        else:
+        if channel == '#aeolus' and mask == self.bot.mask:
             self._taunt(channel)
 
     @command(permission='admin')
