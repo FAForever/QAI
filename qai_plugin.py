@@ -3,13 +3,17 @@ import json
 import random
 import asyncio
 import aiohttp
+import aiomysql
+import itertools
 import irc3
 from irc3.plugins.command import command
+import time
 
 from taunts import TAUNTS
 
 TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+Forged+Alliance" #add the game name at the end of the link (space = "+", eg: Game+Name)
 HITBOX_STREAMS = "https://www.hitbox.tv/api/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
+YOUTUBE_SEARCH = "https://www.googleapis.com/youtube/v3/search?safeSearch=strict&order=date&part=snippet&q=Forged%2BAlliance&key={}"
 
 @irc3.plugin
 class Plugin(object):
@@ -68,7 +72,7 @@ class Plugin(object):
 
             %%slap <guy>
         """
-        yield "Slap! %s " % args['<guy>']
+        yield "slap! %s " % args['<guy>']
 
     def _taunt(self, channel=None, prefix=None):
         if channel is None:
@@ -96,6 +100,34 @@ class Plugin(object):
             return json.loads(data.decode())['streams']
         except (KeyError, ValueError):
             return []
+
+    @command
+    @asyncio.coroutine
+    def casts(self, mask, target, args):
+        """List recent casts
+
+            %%casts
+        """
+        req = yield from aiohttp.request('GET', YOUTUBE_SEARCH.format(self.bot.config['youtube_key']))
+        data = json.loads((yield from req.read()).decode())
+        casts = []
+        print(data)
+        self.bot.privmsg(target, "Recent casts:")
+        for item in itertools.takewhile(lambda _: len(casts) < 5, data['items']):
+            try:
+                self.bot.privmsg(target,
+                    "{title} - {date}: {link}".format(
+                    **{
+                        "id": item['id']['videoId'],
+                        "title": item['snippet']['title'],
+                        "description": item['snippet']['description'],
+                        "date": time.strftime("%x",
+                                              time.strptime(item['snippet']['publishedAt'],
+                                                            self.bot.config['youtube_time_fmt'])),
+                        "link": "http://youtu.be/{}".format(item['id']['videoId'])
+                    }))
+            except (KeyError, ValueError):
+                pass
 
     @command
     @asyncio.coroutine
