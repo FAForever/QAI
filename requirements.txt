@@ -1,2 +1,4 @@
+aiohttp
 configobj
+irc3
 pytest

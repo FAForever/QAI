@@ -1,0 +1,30 @@
+[bot]
+nick = QAI
+realname = QAI
+
+host = irc.faforever.com
+port = 6667
+
+includes =
+    irc3.plugins.command
+    qai_plugin
+
+autojoins =
+    qai_channel
+
+nickserv_password = ""
+
+[irc3.plugins.command]
+antiflood = true
+cmd = !
+guard = irc3.plugins.command.mask_based_policy
+
+[irc3.plugins.command.masks]
+# this section is used by the guard to secure the bot's command
+# change your nickname and uncomment the line below
+sheeo__!*@* = all_permissions
+Voodoo!*@* = all_permissions
+Washy!*@* = all_permissions
+Gorton!*@* = all_permissions
+Tyr!*@* = all_permissions
+* = view
