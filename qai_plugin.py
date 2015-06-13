@@ -16,7 +16,7 @@ TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+
 HITBOX_STREAMS = "https://www.hitbox.tv/api/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
 YOUTUBE_SEARCH = "https://www.googleapis.com/youtube/v3/search?safeSearch=strict&order=date&part=snippet&q=Forged%2BAlliance&maxResults=15&key={}"
 YOUTUBE_DETAIL = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id={}&key={}"
-CAST_PATTERN = "(?:https?://)?(?:www\.)?(?:(?:youtube\.com/watch\?v=)|(?:youtu.be/))([\w0-9]+).*"
+CAST_PATTERN = ".*(?:https?://)?(?:www\.)?(?:(?:youtube\.com/watch\?v=)|(?:youtu.be/))([\w0-9]+).*"
 
 @irc3.plugin
 class Plugin(object):
