@@ -18,6 +18,10 @@ YOUTUBE_SEARCH = "https://www.googleapis.com/youtube/v3/search?safeSearch=strict
 YOUTUBE_DETAIL = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id={}&key={}"
 CAST_PATTERN = ".*(?:https?://)?(?:www\.)?(?:(?:youtube\.com/watch\?v=)|(?:youtu.be/))([\w0-9]+).*"
 
+@irc3.extend
+def action(bot, *args):
+    bot.privmsg(args[0], '\x01ACTION ' + args[1] + '\x01')
+
 @irc3.plugin
 class Plugin(object):
 
@@ -46,6 +50,8 @@ class Plugin(object):
     @asyncio.coroutine
     def on_privmsg(self, *args, **kwargs):
         msg, channel, sender = kwargs['data'], kwargs['target'], kwargs['mask']
+        if 'QAI' in sender.nick:
+            return
         try:
             ytid = re.match(CAST_PATTERN, msg).groups()[0]
             if len(ytid) > 0:
@@ -90,7 +96,7 @@ class Plugin(object):
 
             %%slap <guy>
         """
-        yield "slap! %s " % args['<guy>']
+        self.bot.action(target, "slaps %s " % args['<guy>'])
 
     def _taunt(self, channel=None, prefix=None):
         if channel is None:
@@ -131,14 +137,13 @@ class Plugin(object):
         req = yield from aiohttp.request('GET', YOUTUBE_SEARCH.format(self.bot.config['youtube_key']))
         data = json.loads((yield from req.read()).decode())
         casts = []
-        self.bot.privmsg(target, "Recent casts:")
         for item in itertools.takewhile(lambda _: len(casts) < 5, data['items']):
             channel_title = item['snippet']['channelTitle']
             if channel_title not in self.bot.db['blacklist'].get('users', {}) \
                     and channel_title != '':
                 casts.append(item)
                 try:
-                    self.bot.privmsg(target,
+                    self.bot.action(target,
                         "{channel}: {title} - {date}: {link}".format(
                         **{
                             "id": item['id']['videoId'],
@@ -183,7 +188,7 @@ class Plugin(object):
                 hour = date[1].replace("Z", "")
 
                 try:
-                    self.bot.privmsg(target,
+                    self.bot.action(target,
                                      "%s - %s - %s since %s (%i viewers) "
                                      % (stream["channel"]["display_name"],
                                         stream["channel"]["status"],
