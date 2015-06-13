@@ -13,7 +13,8 @@ from taunts import TAUNTS
 
 TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+Forged+Alliance" #add the game name at the end of the link (space = "+", eg: Game+Name)
 HITBOX_STREAMS = "https://www.hitbox.tv/api/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
-YOUTUBE_SEARCH = "https://www.googleapis.com/youtube/v3/search?safeSearch=strict&order=date&part=snippet&q=Forged%2BAlliance&key={}"
+YOUTUBE_SEARCH = "https://www.googleapis.com/youtube/v3/search?safeSearch=strict&order=date&part=snippet&q=Forged%2BAlliance&maxResults=15&key={}"
+YOUTUBE_DETAIL = "https://www.googleapis.com/youtube/v3/videos?part=statistics&id={}&key={}"
 
 @irc3.plugin
 class Plugin(object):
@@ -113,12 +114,14 @@ class Plugin(object):
         casts = []
         self.bot.privmsg(target, "Recent casts:")
         for item in itertools.takewhile(lambda _: len(casts) < 5, data['items']):
+            casts.append(item)
             try:
                 self.bot.privmsg(target,
-                    "{title} - {date}: {link}".format(
+                    "{channel}: {title} - {date}: {link}".format(
                     **{
                         "id": item['id']['videoId'],
                         "title": item['snippet']['title'],
+                        "channel": item['snippet']['channelTitle'],
                         "description": item['snippet']['description'],
                         "date": time.strftime("%x",
                                               time.strptime(item['snippet']['publishedAt'],
