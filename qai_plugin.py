@@ -114,22 +114,25 @@ class Plugin(object):
         casts = []
         self.bot.privmsg(target, "Recent casts:")
         for item in itertools.takewhile(lambda _: len(casts) < 5, data['items']):
-            casts.append(item)
-            try:
-                self.bot.privmsg(target,
-                    "{channel}: {title} - {date}: {link}".format(
-                    **{
-                        "id": item['id']['videoId'],
-                        "title": item['snippet']['title'],
-                        "channel": item['snippet']['channelTitle'],
-                        "description": item['snippet']['description'],
-                        "date": time.strftime("%x",
-                                              time.strptime(item['snippet']['publishedAt'],
-                                                            self.bot.config['youtube_time_fmt'])),
-                        "link": "http://youtu.be/{}".format(item['id']['videoId'])
-                    }))
-            except (KeyError, ValueError):
-                pass
+            channel_title = item['snippet']['channelTitle']
+            if channel_title not in self.bot.db['blacklist'].get('users', {}) \
+                    and channel_title != '':
+                casts.append(item)
+                try:
+                    self.bot.privmsg(target,
+                        "{channel}: {title} - {date}: {link}".format(
+                        **{
+                            "id": item['id']['videoId'],
+                            "title": item['snippet']['title'],
+                            "channel": channel_title,
+                            "description": item['snippet']['description'],
+                            "date": time.strftime("%x",
+                                                  time.strptime(item['snippet']['publishedAt'],
+                                                                self.bot.config['youtube_time_fmt'])),
+                            "link": "http://youtu.be/{}".format(item['id']['videoId'])
+                        }))
+                except (KeyError, ValueError):
+                    pass
 
     def spam_protect(self, cmd, mask, target, args):
         if time.time() - self.timers[cmd] <= 60*5:
@@ -178,3 +181,23 @@ class Plugin(object):
                                         stream["media_views"]))
         else:
             self._taunt(target)
+
+    @command(permission='admin', public=False)
+    def blacklist(self, mask, target, args):
+        """Blacklist given channel/user from !casts, !streams
+
+            %%blacklist
+            %%blacklist <user>
+        """
+        if 'blacklist' not in self.bot.db:
+            self.bot.db['blacklist'] = {'users': {}}
+        user = args.get('<user>')
+        if user is not None:
+            users = self.bot.db['blacklist'].get('users', {})
+            users[user] = True
+            self.bot.db.set('blacklist', users=users)
+            return "Added {} to blacklist".format(user)
+        else:
+            return self.bot.db['blacklist'].get('users', {})
+
+
