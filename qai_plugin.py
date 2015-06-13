@@ -52,10 +52,10 @@ class Plugin(object):
                 req = yield from aiohttp.request('GET', YOUTUBE_DETAIL.format(ytid, self.bot.config['youtube_key']))
                 data = json.loads((yield from req.read()).decode())['items'][0]
 
-                self.bot.privmsg(channel, "{title} - {views} views - {likes} likes ({link})".format(title=data['snippet']['title'],
+                self.bot.privmsg(channel, "{title} - {views} views - {likes} likes (Linked above by {sender})".format(title=data['snippet']['title'],
                                                             views=data['statistics']['viewCount'],
                                                             likes=data['statistics']['likeCount'],
-                                                            link="http://youtu.be/{}".format(data['id'])))
+                                                            sender=sender.nick))
         except (KeyError, ValueError, AttributeError):
             pass
 
