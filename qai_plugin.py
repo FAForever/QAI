@@ -48,14 +48,15 @@ class Plugin(object):
         msg, channel, sender = kwargs['data'], kwargs['target'], kwargs['mask']
         try:
             ytid = re.match(CAST_PATTERN, msg).groups()[0]
-            req = yield from aiohttp.request('GET', YOUTUBE_DETAIL.format(ytid, self.bot.config['youtube_key']))
-            data = json.loads((yield from req.read()).decode())['items'][0]
+            if len(ytid) > 0:
+                req = yield from aiohttp.request('GET', YOUTUBE_DETAIL.format(ytid, self.bot.config['youtube_key']))
+                data = json.loads((yield from req.read()).decode())['items'][0]
 
-            self.bot.privmsg(channel, "{title} - {views} views - {likes} likes ({link})".format(title=data['snippet']['title'],
-                                                        views=data['statistics']['viewCount'],
-                                                        likes=data['statistics']['likeCount'],
-                                                        link="http://youtu.be/{}".format(data['id'])))
-        except (KeyError, ValueError, AttributeError) as exc:
+                self.bot.privmsg(channel, "{title} - {views} views - {likes} likes ({link})".format(title=data['snippet']['title'],
+                                                            views=data['statistics']['viewCount'],
+                                                            likes=data['statistics']['likeCount'],
+                                                            link="http://youtu.be/{}".format(data['id'])))
+        except (KeyError, ValueError, AttributeError):
             pass
 
     @command(permission='admin')
