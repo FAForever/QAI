@@ -2,6 +2,7 @@
 import json
 import random
 import asyncio
+import re
 import aiohttp
 import aiomysql
 import itertools
@@ -14,7 +15,8 @@ from taunts import TAUNTS
 TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+Forged+Alliance" #add the game name at the end of the link (space = "+", eg: Game+Name)
 HITBOX_STREAMS = "https://www.hitbox.tv/api/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
 YOUTUBE_SEARCH = "https://www.googleapis.com/youtube/v3/search?safeSearch=strict&order=date&part=snippet&q=Forged%2BAlliance&maxResults=15&key={}"
-YOUTUBE_DETAIL = "https://www.googleapis.com/youtube/v3/videos?part=statistics&id={}&key={}"
+YOUTUBE_DETAIL = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id={}&key={}"
+CAST_PATTERN = "(?:https?://)?(?:www\.)?(?:(?:youtube\.com/watch\?v=)|(?:youtu.be/))([\w0-9]+).*"
 
 @irc3.plugin
 class Plugin(object):
@@ -39,6 +41,22 @@ class Plugin(object):
     def on_join(self, channel, mask):
         if channel == '#aeolus' and mask.nick == self.bot.nick:
             self._taunt(channel)
+
+    @irc3.event(irc3.rfc.PRIVMSG)
+    @asyncio.coroutine
+    def on_privmsg(self, *args, **kwargs):
+        msg, channel, sender = kwargs['data'], kwargs['target'], kwargs['mask']
+        try:
+            ytid = re.match(CAST_PATTERN, msg).groups()[0]
+            req = yield from aiohttp.request('GET', YOUTUBE_DETAIL.format(ytid, self.bot.config['youtube_key']))
+            data = json.loads((yield from req.read()).decode())['items'][0]
+
+            self.bot.privmsg(channel, "{title} - {views} views - {likes} likes ({link})".format(title=data['snippet']['title'],
+                                                        views=data['statistics']['viewCount'],
+                                                        likes=data['statistics']['likeCount'],
+                                                        link="http://youtu.be/{}".format(data['id'])))
+        except (KeyError, ValueError, AttributeError) as exc:
+            pass
 
     @command(permission='admin')
     def taunt(self, mask, target, args):
