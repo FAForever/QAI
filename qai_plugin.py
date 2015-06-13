@@ -20,6 +20,8 @@ class Plugin(object):
 
     def __init__(self, bot):
         self.bot = bot
+        self.timers = {'casts': 0, 'streams': 0}
+        self._rage = 0
 
     @classmethod
     def reload(cls, old):
@@ -30,12 +32,11 @@ class Plugin(object):
 
     @irc3.event(irc3.rfc.CONNECTED)
     def nickserv_auth(self, *args, **kwargs):
-        print(self.bot.config)
         self.bot.privmsg('nickserv', 'identify %s' % self.bot.config['nickserv_password'])
 
     @irc3.event(irc3.rfc.JOIN)
     def on_join(self, channel, mask):
-        if channel == '#aeolus' and mask == self.bot.mask:
+        if channel == '#aeolus' and mask.nick == self.bot.nick:
             self._taunt(channel)
 
     @command(permission='admin')
@@ -105,10 +106,11 @@ class Plugin(object):
 
             %%casts
         """
+        if self.spam_protect('casts', mask, target, args):
+            return
         req = yield from aiohttp.request('GET', YOUTUBE_SEARCH.format(self.bot.config['youtube_key']))
         data = json.loads((yield from req.read()).decode())
         casts = []
-        print(data)
         self.bot.privmsg(target, "Recent casts:")
         for item in itertools.takewhile(lambda _: len(casts) < 5, data['items']):
             try:
@@ -126,6 +128,16 @@ class Plugin(object):
             except (KeyError, ValueError):
                 pass
 
+    def spam_protect(self, cmd, mask, target, args):
+        if time.time() - self.timers[cmd] <= 60*5:
+            self._taunt(channel=target, prefix=mask.nick)
+            if self._rage > 2:
+                self.bot.privmsg(target, "!kick {}".format(mask.nick))
+            self._rage += 1
+            return True
+        self._rage = 0
+        self.timers[cmd] = time.time()
+
     @command
     @asyncio.coroutine
     def streams(self, mask, target, args):
@@ -133,6 +145,8 @@ class Plugin(object):
 
             %%streams
         """
+        if self.spam_protect('streams', mask, target, args):
+            return
         streams = yield from self.hitbox_streams()
         streams.extend((yield from self.twitch_streams()))
 
