@@ -13,6 +13,7 @@ autojoins =
     qai_channel
 
 nickserv_password = ""
+detectlanguage_api_key = ""
 
 [irc3.plugins.command]
 antiflood = true

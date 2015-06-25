@@ -9,6 +9,7 @@ import itertools
 import irc3
 from irc3.plugins.command import command
 import time
+import detectlanguage
 
 from taunts import TAUNTS
 
@@ -29,6 +30,7 @@ class Plugin(object):
         self.bot = bot
         self.timers = {'casts': 0, 'streams': 0}
         self._rage = 0
+        detectlanguage.configuration.api_key = self.bot.config['detectlanguage_api_key']
 
     @classmethod
     def reload(cls, old):
@@ -52,6 +54,8 @@ class Plugin(object):
         msg, channel, sender = kwargs['data'], kwargs['target'], kwargs['mask']
         if 'QAI' in sender.nick:
             return
+        if channel == '#aeolus':
+            asyncio.async(self.check_language(msg, sender))
         try:
             ytid = re.match(CAST_PATTERN, msg).groups()[0]
             if len(ytid) > 0:
@@ -65,6 +69,12 @@ class Plugin(object):
         except (KeyError, ValueError, AttributeError):
             pass
 
+    @asyncio.coroutine
+    def check_language(self, msg, sender):
+        yield from asyncio.sleep(0.1)
+        if detectlanguage.simple_detect(msg) != 'en':
+            self.bot.privmsg(sender, 'Please only use English in #aeolus.')
+
     @command(permission='admin')
     def taunt(self, mask, target, args):
         """Send a taunt
@@ -72,7 +82,10 @@ class Plugin(object):
             %%taunt
             %%taunt <person>
         """
-        self._taunt(channel=target, prefix=args.get('<person>', ''))
+        p = args.get('<person>')
+        if p == 'QAI':
+            p = mask.nick
+        self._taunt(channel=target, prefix=p)
 
     @command
     def join(self, mask, target, args):
