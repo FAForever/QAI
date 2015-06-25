@@ -73,7 +73,7 @@ class Plugin(object):
     def check_language(self, msg, sender):
         yield from asyncio.sleep(0.1)
         if detectlanguage.simple_detect(msg) != 'en':
-            self.bot.privmsg(sender, 'Please only use English in #aeolus.')
+            self.bot.privmsg(sender.nick, 'Please only use English in #aeolus.')
 
     @command(permission='admin')
     def taunt(self, mask, target, args):
