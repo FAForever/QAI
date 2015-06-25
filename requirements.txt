@@ -1,5 +1,4 @@
 aiohttp
 configobj
-detectlanguage
 irc3
 pytest
