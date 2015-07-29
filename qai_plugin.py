@@ -79,6 +79,14 @@ class Plugin(object):
             p = mask.nick
         self._taunt(channel=target, prefix=p)
 
+    @command(permission='admin')
+    def explode(self, mask, target, args):
+        """Explode
+
+            %%explode
+        """
+        self.bot.action(target, "explodes")
+
     @command
     def join(self, mask, target, args):
         """Overtake the given channel
