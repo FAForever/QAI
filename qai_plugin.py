@@ -43,8 +43,10 @@ class Plugin(object):
 
     @irc3.event(irc3.rfc.JOIN)
     def on_join(self, channel, mask):
-        if channel == '#aeolus' and mask.nick == self.bot.nick:
-            self._taunt(channel)
+        if channel == '#aeolus':
+            for channel in self.bot.db['chatlists']:
+                if mask.nick in self.bot.db['chatlists'].get(channel, {}).keys():
+                    self.bot.privmsg('OperServ', 'svsjoin %s %s' % (mask.nick, channel))
 
     @irc3.event(irc3.rfc.PRIVMSG)
     @asyncio.coroutine
@@ -226,5 +228,35 @@ class Plugin(object):
             return "Added {} to blacklist".format(user)
         else:
             return self.bot.db['blacklist'].get('users', {})
+
+
+    @command(permission='chatlist')
+    def chatlist(self, mask, target, args):
+        """Chat lists
+
+            %%chatlist
+            %%chatlist <channel>
+            %%chatlist add <channel> <user>
+            %%chatlist del <channel> <user>
+        """
+        print(args)
+        if 'chatlists' not in self.bot.db:
+            self.bot.db['chatlists'] = {}
+        channel, user, add, remove = args.get('<channel>'), args.get('<user>'), args.get('add'), args.get('del')
+        if not add and not remove:
+            if not channel:
+                self.bot.privmsg(mask.nick, repr(self.bot.db.get('chatlists')))
+            else:
+                self.bot.privmsg(mask.nick, repr(self.bot.db['chatlists'].get(channel, {}).keys()))
+        elif add:
+            if channel not in self.bot.db['chatlists']:
+                self.bot.db['chatlists'][channel] = {}
+            self.bot.db['chatlists'][channel][user] = True
+            self.bot.privmsg(mask.nick, "OK added %s to %s" % (user, channel))
+        elif remove:
+            if channel not in self.bot.db['chatlists']:
+                self.bot.db['chatlists'][channel] = {}
+            del self.bot.db['chatlists'][channel][user]
+            self.bot.privmsg(mask.nick, "OK removed %s from %s" % (user, channel))
 
 
