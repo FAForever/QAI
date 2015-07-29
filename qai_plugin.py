@@ -1,3 +1,4 @@
+# vim: ts=4 et sw=4 sts=4
 # -*- coding: utf-8 -*-
 import json
 import random
@@ -9,6 +10,7 @@ import itertools
 import irc3
 from irc3.plugins.command import command
 import time
+from urllib.parse import urlparse, parse_qs
 
 from taunts import TAUNTS
 
@@ -16,7 +18,7 @@ TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+
 HITBOX_STREAMS = "https://www.hitbox.tv/api/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
 YOUTUBE_SEARCH = "https://www.googleapis.com/youtube/v3/search?safeSearch=strict&order=date&part=snippet&q=Forged%2BAlliance&maxResults=15&key={}"
 YOUTUBE_DETAIL = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id={}&key={}"
-CAST_PATTERN = ".*(?:https?://)?(?:www\.)?(?:(?:youtube\.com/watch\?v=)|(?:youtu.be/))([\w0-9]+).*"
+URL_MATCH = ".*(https?:\/\/[^ ]+\.[^ ]*).*"
 
 @irc3.extend
 def action(bot, *args):
@@ -55,7 +57,9 @@ class Plugin(object):
         if 'QAI' in sender.nick:
             return
         try:
-            ytid = re.match(CAST_PATTERN, msg).groups()[0]
+            link_url = re.match(URL_MATCH, msg).groups()[0]
+            uri = urlparse(link_url)
+            ytid = parse_qs(uri.query).get('v', '')[0]
             if len(ytid) > 0:
                 req = yield from aiohttp.request('GET', YOUTUBE_DETAIL.format(ytid, self.bot.config['youtube_key']))
                 data = json.loads((yield from req.read()).decode())['items'][0]
