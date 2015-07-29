@@ -135,7 +135,11 @@ class Plugin(object):
         req = yield from aiohttp.request('GET', HITBOX_STREAMS)
         data = yield from req.read()
         try:
-            return json.loads(data.decode())['livestreams']
+            data = json.loads(data.decode())
+            livestreams = data.get('livestreams', None)
+            if not livestreams:
+                livestreams = data['livestream']
+            return livestreams
         except (KeyError, ValueError):
             return []
 
@@ -206,7 +210,7 @@ class Plugin(object):
         if len(streams) > 0:
             self.bot.privmsg(target, "%i streams online:" % len(streams))
             for stream in streams:
-                t = stream["channel"]["updated_at"]
+                t = stream["channel"].get("updated_at", "T0")
                 date = t.split("T")
                 hour = date[1].replace("Z", "")
 
