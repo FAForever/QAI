@@ -96,6 +96,16 @@ class Plugin(object):
         self.bot.join(args['<channel>'])
 
     @command(permission='admin', public=False)
+    def puppet(self, mask, target, args):
+        """Puppet
+
+            %%puppet <target> WORDS ...
+        """
+        t = args.get('<target>')
+        m = " ".join(args.get('WORDS'))
+        self.bot.privmsg(t, m)
+
+    @command(permission='admin', public=False)
     def reload(self, mask, target, args):
         """Reboot the mainframe
 
