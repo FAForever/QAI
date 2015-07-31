@@ -285,7 +285,7 @@ class Plugin(object):
                 print("stream loop")
 
                 try:
-                    self.bot.privmsg(target,
+                    self.bot.action(target,
                                      "%s - %s - %s Since %s (%s viewers) "
                                      % (stream["media_display_name"],
                                         stream["media_status"],
