@@ -89,8 +89,6 @@ class Plugin(object):
         p = args.get('<person>')
         if p == 'QAI':
             p = mask.nick
-        if not p is None:
-            p += ": "
         self._taunt(channel=target, prefix=p)
 
     @command(permission='admin')
@@ -181,10 +179,10 @@ class Plugin(object):
     def _taunt(self, channel=None, prefix=None, tauntTable=None):
         if channel is None:
             channel = "#qai_channel"
-        if prefix is None:
-            prefix = ''
         if tauntTable is None:
             tauntTable = TAUNTS
+        if prefix is None:
+            prefix = ''
         else:
             prefix = '%s: ' % prefix
         self.bot.privmsg(channel, "%s%s" % (prefix, random.choice(tauntTable)))
