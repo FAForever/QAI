@@ -7,22 +7,23 @@ This is the source code for the [Forged Alliance Forever](http://www.faforever.c
 
 ## Installation
 
-Install Python 2.7 or a later 2.x version.
+Install Python 3.4 or a later 3.x version.
 
 Install the package dependencies:
 
-    pip install -r requirements.txt
+    windows:	pip install -r requirements.txt
+    linux:		pip3 install -r requirements.txt
 
 Create the config file and modify the settings as appropriate:
 
-    cp fafbot.conf.example fafbot.conf
+    cp config.ini.example config.ini
 
 Create the `passwords.py` file. You can create of copy of the `passwords.py.example` file
 in [the server repo](https://github.com/FAForever/server).
 
 ## Usage
 
-    python fafbot.py
+    irc3 config.ini
 
 ## Running the tests
 
