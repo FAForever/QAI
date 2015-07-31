@@ -140,7 +140,10 @@ class Plugin(object):
             if self.spam_protect('links', mask, target, args):
                 return
 
-            msg = "Unkown value: \"" + args['<argument>'] + "\". Do you meanone of these: "
+            msg = ""
+            if not args['<argument>'] is None:
+                msg = "Unkown value: \"" + args['<argument>'] + "\"."
+            msg += "Do you meanone of these: "
             isFirst = True
             for key in LINKS.keys():
                 if not isFirst:
