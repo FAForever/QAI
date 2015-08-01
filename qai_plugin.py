@@ -31,7 +31,7 @@ class Plugin(object):
 
     def __init__(self, bot):
         self.bot = bot
-        self.timers = {'casts': 0, 'streams': 0, 'links': 0}
+        self.timers = {'casts': {}, 'streams': {}, 'links': {}}
         self._rage = {}
 
     @classmethod
@@ -249,7 +249,9 @@ class Plugin(object):
             pass
 
     def spam_protect(self, cmd, mask, target, args):
-        if time.time() - self.timers[cmd] <= self.bot.config['spam_protect_time']:
+        if not target in self.timers[cmd]:
+            self.timers[cmd][target] = 0
+        if time.time() - self.timers[cmd][target] <= self.bot.config['spam_protect_time']:
             try: 
                 self._rage[mask.nick] += 1
             except:
@@ -261,7 +263,7 @@ class Plugin(object):
                 self._rage[mask.nick] = 1
             return True
         self._rage = {}
-        self.timers[cmd] = time.time()
+        self.timers[cmd][target] = time.time()
 
     @command
     @asyncio.coroutine
