@@ -143,7 +143,7 @@ class Plugin(object):
             msg = ""
             if not args['<argument>'] is None:
                 msg = "Unkown value: \"" + args['<argument>'] + "\"."
-            msg += "Do you meanone of these: "
+            msg += "Do you mean one of these: "
             isFirst = True
             for key in LINKS.keys():
                 if not isFirst:
@@ -258,7 +258,7 @@ class Plugin(object):
             self._taunt(channel=target, prefix=mask.nick, tauntTable=SPAM_PROTECT_TAUNTS)
             if self._rage[mask.nick] >= self.bot.config['rage_to_kick']:
                 self.bot.privmsg(target, "!kick {}".format(mask.nick))
-            self._rage[mask.nick] = 1
+                self._rage[mask.nick] = 1
             return True
         self._rage = {}
         self.timers[cmd] = time.time()
