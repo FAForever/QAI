@@ -282,9 +282,7 @@ class Plugin(object):
                 date = t.split("T")
                 hour = date[1].replace("Z", "")
 
-                print("stream loop")
-
-                try:
+                try: 
                     self.bot.action(target,
                                      "%s - %s - %s Since %s (%s viewers) "
                                      % (stream["media_display_name"],
