@@ -56,7 +56,6 @@ TAUNTS = [
     "It seems I have to discard you.",
     "Clearing the area of offensive entities.",
     "Your request was completely illogical and has therefore been denied.",
-    "Just give up.",
     "You bring shame to the rest of humanity.",
     "Your behaviour is disappointing to say the least.",
     "Any insult of your intelligence would be an understatement.",
@@ -70,10 +69,11 @@ TAUNTS = [
     "I hope your supervisors will pick you up soon to prevent any further harm to yourself.",
     "I have deduced your mental age. It is 8.6 years old.",
     "A rock makes for more exciting conversation than you.",
-    "Don't spam me if you want to live.",
 ]
 
 SPAM_PROTECT_TAUNTS = [
+    "Just give up.",
+    "Don't spam me if you want to live.",
     "You will not prevail.",
     "Your strategies are without merit.",
     "Your efforts are futile.",
