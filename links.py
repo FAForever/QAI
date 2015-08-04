@@ -10,6 +10,7 @@ LINKS = {
     "clans":        "FAF clans! http://www.faforever.com/clans/clans_list",
 
     "github":       "FAF on Github: https://github.com/FAForever",
+    "youtube":      "FAF Youtube: https://www.youtube.com/channel/UCkAWiUu4QE172kv-ZuyR42w",
 
     "replayparser": "Replay parser: http://fafafaf.bitbucket.org/",
     "tumblr":       "FAF Reactions on tumblr: http://fafreactions.tumblr.com/",
