@@ -13,7 +13,7 @@ import time
 from urllib.parse import urlparse, parse_qs
 
 from taunts import TAUNTS, SPAM_PROTECT_TAUNTS
-from links import LINKS
+from links import LINKS, WIKI_LINKS
 
 TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+Forged+Alliance" #add the game name at the end of the link (space = "+", eg: Game+Name)
 HITBOX_STREAMS = "https://api.hitbox.tv/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
@@ -31,7 +31,7 @@ class Plugin(object):
 
     def __init__(self, bot):
         self.bot = bot
-        self.timers = {'casts': {}, 'streams': {}, 'links': {}}
+        self.timers = {'casts': {}, 'streams': {}, 'links': {}, 'wiki': {}}
         self._rage = {}
 
     @classmethod
@@ -100,6 +100,14 @@ class Plugin(object):
         self.bot.action(target, "explodes")
 
     @command(permission='admin')
+    def hug(self, mask, target, args):
+        """Hug someone
+
+            %%hug <someone>
+        """
+        self.bot.action(target, "hugs " + args['<someone>'])
+
+    @command(permission='admin')
     def flip(self, mask, target, args):
         """Flip table
 
@@ -142,7 +150,7 @@ class Plugin(object):
 
             msg = ""
             if not args['<argument>'] is None:
-                msg = "Unkown value: \"" + args['<argument>'] + "\"."
+                msg = "Unkown value: \"" + args['<argument>'] + "\". "
             msg += "Do you mean one of these: "
             isFirst = True
             for key in LINKS.keys():
@@ -151,6 +159,34 @@ class Plugin(object):
                 isFirst = False
                 msg += key
             msg += " ?"
+            self.bot.privmsg(target, msg)
+
+    @command
+    def wiki(self, mask, target, args):
+        """Link to a wiki page
+
+            %%wiki
+            %%wiki <argument>
+        """
+        try:
+            self.bot.privmsg(target, WIKI_LINKS[args['<argument>']])
+        except:
+            if self.spam_protect('wiki', mask, target, args):
+                return
+
+            msg = ""
+            if not args['<argument>'] is None:
+                msg = "Unkown value: \"" + args['<argument>'] + "\". Do you mean one of these: "
+            else:
+                msg = LINKS["wiki"] + " For better matches try !wiki " 
+            isFirst = True
+            for key in WIKI_LINKS.keys():
+                if not isFirst:
+                    msg += " / "
+                isFirst = False
+                msg += key
+            if not args['<argument>'] is None:
+                msg += " ?"
             self.bot.privmsg(target, msg)
 
     @command(permission='admin', public=False)
