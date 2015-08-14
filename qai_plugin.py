@@ -75,7 +75,7 @@ class Plugin(object):
         try:
             replayId = re.match(REPLAY_MATCH, msg).groups()[0]
             url = LINKS["replay"].replace("ID", replayId)
-            self.bot.privmsg(channel, "Replay link: %s" % url.replace('#', ''))
+            self.bot.privmsg(channel, url.replace('#', ''))
         except:
             pass
 
