@@ -18,7 +18,11 @@ detectlanguage_api_key = ""
 youtube_key = ""
 youtube_time_fmt = ""
 
-spam_protect_time = 30
+challonge_username = faftd
+challonge_api_key = howAboutNo
+tourney_announcement_interval = 3600
+
+spam_protect_time = 120
 rage_to_kick = 3
 
 [irc3.plugins.command]

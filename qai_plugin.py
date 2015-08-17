@@ -8,6 +8,8 @@ import aiohttp
 import aiomysql
 import itertools
 import irc3
+import _thread
+import time
 from irc3.plugins.command import command
 import time
 from urllib.parse import urlparse, parse_qs
@@ -19,6 +21,7 @@ TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+
 HITBOX_STREAMS = "https://api.hitbox.tv/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
 YOUTUBE_SEARCH = "https://www.googleapis.com/youtube/v3/search?safeSearch=strict&order=date&part=snippet&q=Forged%2BAlliance&maxResults=15&key={}"
 YOUTUBE_DETAIL = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id={}&key={}"
+CHALLONGE_TOURNEYS = "" #filled in init
 URL_MATCH = ".*(https?:\/\/[^ ]+\.[^ ]*).*"
 REPLAY_MATCH = ".*(#[0-9]+).*"
 
@@ -31,8 +34,10 @@ class Plugin(object):
 
     def __init__(self, bot):
         self.bot = bot
-        self.timers = {'casts': {}, 'streams': {}, 'links': {}, 'wiki': {}}
+        self.timers = {}
         self._rage = {}
+        global CHALLONGE_TOURNEYS
+        CHALLONGE_TOURNEYS = "https://"+self.bot.config['challonge_username']+":"+self.bot.config['challonge_api_key']+"@api.challonge.com/v1/"
 
     @classmethod
     def reload(cls, old):
@@ -90,6 +95,42 @@ class Plugin(object):
         if p == 'QAI':
             p = mask.nick
         self._taunt(channel=target, prefix=p)
+
+    @asyncio.coroutine
+    def challonge_tourneys(self):
+        req = yield from aiohttp.request('GET', CHALLONGE_TOURNEYS + "tournaments.json")
+        try:
+            return json.loads((yield from req.read()).decode())
+        except:
+            return []
+
+    @command
+    @asyncio.coroutine
+    def tourneys(self, mask, target, args):
+        """Check tourneys
+
+            %%tourneys
+        """
+        if self.spam_protect('tourneys', mask, target, args):
+            return
+        tourneys = yield from self.challonge_tourneys()
+        if len(tourneys) < 1:
+            self.bot.privmsg(target, "No tourneys found!")
+
+        self.bot.privmsg(target, str(len(tourneys)) + " tourneys:")
+        for tourney in tourneys:
+            try:
+                description = tourney['tournament'].get("description")
+
+                self.bot.action(target,
+                    "{name}: {description} ({link})".format(
+                    **{
+                        "name": tourney['tournament'].get("name", "Untitled"),
+                        "description": re.sub("<[^<>]+>", "", re.sub("(<span>|[\r\n]|[\n]|[\.]|[\?]).*", "", description)),
+                        "link": tourney['tournament'].get("full_challonge_url"),
+                    }))
+            except (KeyError, ValueError):
+                pass
 
     @command(permission='admin')
     def explode(self, mask, target, args):
@@ -285,6 +326,8 @@ class Plugin(object):
             pass
 
     def spam_protect(self, cmd, mask, target, args):
+        if not cmd in self.timers:
+            self.timers[cmd] = {}
         if not target in self.timers[cmd]:
             self.timers[cmd][target] = 0
         if time.time() - self.timers[cmd][target] <= self.bot.config['spam_protect_time']:
