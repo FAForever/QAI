@@ -34,7 +34,7 @@ class Plugin(object):
         self.bot = bot
         self.timers = {}
         self._rage = {}
-        challonge.setChallongeTourneyLink("https://"+self.bot.config['challonge_username']+":"+self.bot.config['challonge_api_key']+"@api.challonge.com/v1/")
+        challonge.setChallongeData(self.bot.config['challonge_username'], self.bot.config['challonge_api_key'])
 
     @classmethod
     def reload(cls, old):
@@ -58,7 +58,7 @@ class Plugin(object):
     @asyncio.coroutine
     def on_privmsg(self, *args, **kwargs):
         msg, channel, sender = kwargs['data'], kwargs['target'], kwargs['mask']
-        if 'QAI' in sender.nick:
+        if self.bot.config['nick'] in sender.nick:
             return
         try:
             link_url = re.match(URL_MATCH, msg).groups()[0]
@@ -72,7 +72,7 @@ class Plugin(object):
                                                             views=data['statistics']['viewCount'],
                                                             likes=data['statistics']['likeCount'],
                                                             sender=sender.nick))
-        except (KeyError, ValueError, AttributeError):
+        except (KeyError, ValueError, AttributeError, IndexError):
             pass
         try:
             replayId = re.match(REPLAY_MATCH, msg).groups()[0]
@@ -89,26 +89,9 @@ class Plugin(object):
             %%taunt <person>
         """
         p = args.get('<person>')
-        if p == 'QAI':
+        if p == self.bot.config['nick']:
             p = mask.nick
         self._taunt(channel=target, prefix=p)
-
-    @command
-    @asyncio.coroutine
-    def tourneys(self, mask, target, args):
-        """Check tourneys
-
-            %%tourneys
-        """
-        if self.spam_protect('tourneys', mask, target, args):
-            return
-        tourneys = yield from challonge.printable_tourney_list()
-        if len(tourneys) < 1:
-            self.bot.privmsg(target, "No tourneys found!")
-
-        self.bot.privmsg(target, str(len(tourneys)) + " tourneys:")
-        for tourney in tourneys:
-            self.bot.action(target, tourney)
 
     @command(permission='admin')
     def explode(self, mask, target, args):
@@ -224,7 +207,7 @@ class Plugin(object):
 
             %%reload
         """
-        self.bot.reload('qai')
+        self.bot.reload(self.bot.config['nick'])
 
     @command(permission='admin')
     def slap(self, mask, target, args):
@@ -407,5 +390,67 @@ class Plugin(object):
                 self.bot.db['chatlists'][channel] = {}
             del self.bot.db['chatlists'][channel][user]
             self.bot.privmsg(mask.nick, "OK removed %s from %s" % (user, channel))
+
+    @command
+    @asyncio.coroutine
+    def tourneys(self, mask, target, args):
+        """Check tourneys
+
+            %%tourneys
+        """
+        if self.spam_protect('tourneys', mask, target, args):
+            return
+        tourneys = yield from challonge.printable_tourney_list()
+        if len(tourneys) < 1:
+            self.bot.privmsg(target, "No tourneys found!")
+
+        self.bot.privmsg(target, str(len(tourneys)) + " tourneys:")
+        for tourney in tourneys:
+            self.bot.action(target, tourney)
+
+    @command(permission='admin', public=False)
+    @asyncio.coroutine
+    def challonge(self, mask, target, args):
+        """Controls over faftd
+
+            %%challonge
+            %%challonge get
+            %%challonge create
+            %%challonge create <type>
+            %%challonge delete
+        """
+        get, create, delete = args.get('get'), args.get('create'), args.get('delete')
+
+        if not get and not create and not delete:
+            for text in [
+                "Use:",
+                "\"!challonge get\" to receive tourney IDs",
+                "\"!challonge create\" to create a generic blitz tourny (only one at a time)",
+                "\"!challonge create <swiss|single|double|rr>\"",
+                "\"!challonge delete\" to delete the currently running generic blitz tourney",
+            ]:
+                self.bot.privmsg(mask.nick, text)
+            return
+
+        if get:
+            tourneys = yield from challonge.printable_tourney_list_ids()
+            if len(tourneys) < 1:
+                self.bot.privmsg(mask.nick, "No tourneys available")
+            else:
+                for tourney in tourneys:
+                    self.bot.privmsg(mask.nick, tourney)
+            return
+
+        if create:
+            tourneyType = args.get("<type>")
+            args = {}
+            if tourneyType:
+                t = {"single":"single elimination", "double":"double elimination", "swiss":"swiss", "rr":"round robin"}.get(tourneyType)
+                if not t:
+                    self.bot.privmsg(mask.nick, "Not available tourney type: " + tourneyType)
+                    return
+                args["tournament_type"] = t
+            yield from challonge.create_tourney(args)
+            return
 
 
