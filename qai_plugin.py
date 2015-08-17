@@ -8,12 +8,11 @@ import aiohttp
 import aiomysql
 import itertools
 import irc3
-import _thread
-import time
 from irc3.plugins.command import command
 import time
 from urllib.parse import urlparse, parse_qs
 
+import challonge
 from taunts import TAUNTS, SPAM_PROTECT_TAUNTS
 from links import LINKS, WIKI_LINKS
 
@@ -21,7 +20,6 @@ TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+
 HITBOX_STREAMS = "https://api.hitbox.tv/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
 YOUTUBE_SEARCH = "https://www.googleapis.com/youtube/v3/search?safeSearch=strict&order=date&part=snippet&q=Forged%2BAlliance&maxResults=15&key={}"
 YOUTUBE_DETAIL = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id={}&key={}"
-CHALLONGE_TOURNEYS = "" #filled in init
 URL_MATCH = ".*(https?:\/\/[^ ]+\.[^ ]*).*"
 REPLAY_MATCH = ".*(#[0-9]+).*"
 
@@ -36,8 +34,7 @@ class Plugin(object):
         self.bot = bot
         self.timers = {}
         self._rage = {}
-        global CHALLONGE_TOURNEYS
-        CHALLONGE_TOURNEYS = "https://"+self.bot.config['challonge_username']+":"+self.bot.config['challonge_api_key']+"@api.challonge.com/v1/"
+        challonge.setChallongeTourneyLink("https://"+self.bot.config['challonge_username']+":"+self.bot.config['challonge_api_key']+"@api.challonge.com/v1/")
 
     @classmethod
     def reload(cls, old):
@@ -96,14 +93,6 @@ class Plugin(object):
             p = mask.nick
         self._taunt(channel=target, prefix=p)
 
-    @asyncio.coroutine
-    def challonge_tourneys(self):
-        req = yield from aiohttp.request('GET', CHALLONGE_TOURNEYS + "tournaments.json")
-        try:
-            return json.loads((yield from req.read()).decode())
-        except:
-            return []
-
     @command
     @asyncio.coroutine
     def tourneys(self, mask, target, args):
@@ -113,24 +102,13 @@ class Plugin(object):
         """
         if self.spam_protect('tourneys', mask, target, args):
             return
-        tourneys = yield from self.challonge_tourneys()
+        tourneys = yield from challonge.printable_tourney_list()
         if len(tourneys) < 1:
             self.bot.privmsg(target, "No tourneys found!")
 
         self.bot.privmsg(target, str(len(tourneys)) + " tourneys:")
         for tourney in tourneys:
-            try:
-                description = tourney['tournament'].get("description")
-
-                self.bot.action(target,
-                    "{name}: {description} ({link})".format(
-                    **{
-                        "name": tourney['tournament'].get("name", "Untitled"),
-                        "description": re.sub("<[^<>]+>", "", re.sub("(<span>|[\r\n]|[\n]|[\.]|[\?]).*", "", description)),
-                        "link": tourney['tournament'].get("full_challonge_url"),
-                    }))
-            except (KeyError, ValueError):
-                pass
+            self.bot.action(target, tourney)
 
     @command(permission='admin')
     def explode(self, mask, target, args):
