@@ -10,12 +10,8 @@ APIKEY = ""
 API_LINK = ""
 
 def setChallongeData(username, apikey):
-    global USER
-    USER = username
-    global APIKEY
-    APIKEY = apikey
-    global API_LINK
-    API_LINK = "https://"+username+":"+apikey+"@api.challonge.com/v1/"
+    global USER, APIKEY, API_LINK
+    USER, APIKEY, API_LINK = username, apikey, "https://"+username+":"+apikey+"@api.challonge.com/v1/"
 
 # http://api.challonge.com/v1
 #----------------------------------------------
@@ -35,9 +31,6 @@ def getFAFDefaultSettings():
 def __buildJSONParams(params, prefix=None):
     p = {}
     for key in params.keys():
-        if isinstance(params[key], bool):
-            params[key] = str(params[key]).lower()
-
         if prefix:
             p["%s[%s]" % (prefix, key)] = params[key]
         else:
@@ -69,7 +62,7 @@ def getTourneyByLink(link):
 @asyncio.coroutine
 def getAvailableTourneyLink():
     while True:
-        link = 'FAF_'+''.join(random.SystemRandom().choice(string.ascii_uppercase + string.ascii_lowercase+ string.digits) for _ in range(10))
+        link = 'FAF_'+''.join(random.SystemRandom().choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(10))
         isAvailable = ((yield from getTourneyByLink(link)) == None)
         if isAvailable:
             return link
