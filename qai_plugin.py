@@ -13,7 +13,7 @@ import time
 from urllib.parse import urlparse, parse_qs
 
 import challonge
-from taunts import TAUNTS, SPAM_PROTECT_TAUNTS
+from taunts import TAUNTS, SPAM_PROTECT_TAUNTS, KICK_TAUNTS
 from links import LINKS, WIKI_LINKS
 
 ALL_TAUNTS = [] # extended in init
@@ -301,10 +301,12 @@ class Plugin(object):
             except:
                 self._rage[mask.nick] = 1
 
-            self._taunt(channel=target, prefix=mask.nick, tauntTable=SPAM_PROTECT_TAUNTS)
             if self._rage[mask.nick] >= self.bot.config['rage_to_kick']:
+                self._taunt(channel=target, prefix=mask.nick, tauntTable=KICK_TAUNTS)
                 self.bot.privmsg(target, "!kick {}".format(mask.nick))
                 self._rage[mask.nick] = 1
+            else:  
+                self._taunt(channel=target, prefix=mask.nick, tauntTable=SPAM_PROTECT_TAUNTS)
             return True
         self._rage = {}
         self.timers[cmd][target] = time.time()
