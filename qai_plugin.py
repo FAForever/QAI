@@ -16,6 +16,7 @@ import challonge
 from taunts import TAUNTS, SPAM_PROTECT_TAUNTS
 from links import LINKS, WIKI_LINKS
 
+ALL_TAUNTS = [] # extended in init
 TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+Forged+Alliance" #add the game name at the end of the link (space = "+", eg: Game+Name)
 HITBOX_STREAMS = "https://api.hitbox.tv/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
 YOUTUBE_SEARCH = "https://www.googleapis.com/youtube/v3/search?safeSearch=strict&order=date&part=snippet&q=Forged%2BAlliance&maxResults=15&key={}"
@@ -34,6 +35,9 @@ class Plugin(object):
         self.bot = bot
         self.timers = {}
         self._rage = {}
+        global ALL_TAUNTS
+        ALL_TAUNTS.extend(TAUNTS)
+        ALL_TAUNTS.extend(SPAM_PROTECT_TAUNTS)
         challonge.setChallongeData(self.bot.config['challonge_username'], self.bot.config['challonge_api_key'])
 
     @classmethod
@@ -221,7 +225,7 @@ class Plugin(object):
         if channel is None:
             channel = "#qai_channel"
         if tauntTable is None:
-            tauntTable = TAUNTS
+            tauntTable = ALL_TAUNTS
         if prefix is None:
             prefix = ''
         else:
@@ -407,50 +411,3 @@ class Plugin(object):
         self.bot.privmsg(target, str(len(tourneys)) + " tourneys:")
         for tourney in tourneys:
             self.bot.action(target, tourney)
-
-    @command(permission='admin', public=False)
-    @asyncio.coroutine
-    def challonge(self, mask, target, args):
-        """Controls over faftd
-
-            %%challonge
-            %%challonge get
-            %%challonge create
-            %%challonge create <type>
-            %%challonge delete
-        """
-        get, create, delete = args.get('get'), args.get('create'), args.get('delete')
-
-        if not get and not create and not delete:
-            for text in [
-                "Use:",
-                "\"!challonge get\" to receive tourney IDs",
-                "\"!challonge create\" to create a generic blitz tourny (only one at a time)",
-                "\"!challonge create <swiss|single|double|rr>\"",
-                "\"!challonge delete\" to delete the currently running generic blitz tourney",
-            ]:
-                self.bot.privmsg(mask.nick, text)
-            return
-
-        if get:
-            tourneys = yield from challonge.printable_tourney_list_ids()
-            if len(tourneys) < 1:
-                self.bot.privmsg(mask.nick, "No tourneys available")
-            else:
-                for tourney in tourneys:
-                    self.bot.privmsg(mask.nick, tourney)
-            return
-
-        if create:
-            tourneyType = args.get("<type>")
-            args = {}
-            if tourneyType:
-                t = {"single":"single elimination", "double":"double elimination", "swiss":"swiss", "rr":"round robin"}.get(tourneyType)
-                if not t:
-                    self.bot.privmsg(mask.nick, "Not available tourney type: " + tourneyType)
-                    return
-                args["tournament_type"] = t
-            yield from challonge.create_tourney(args)
-            return
-
-
