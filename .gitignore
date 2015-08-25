@@ -4,4 +4,4 @@ db.json
 fafbot.conf
 .coverage
 config.ini
-testconfig.ini
+.idea
