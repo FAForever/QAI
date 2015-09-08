@@ -15,10 +15,16 @@ LINKS = {
     "replayparser": "Replay parser: http://fafafaf.bitbucket.org/",
     "tumblr":       "FAF Reactions on tumblr: http://fafreactions.tumblr.com/",
 }
+LINKS_SYNONYMES = {
+    "techsupport":  LINKS["support"],
+}
 
 WIKI_LINKS = {
     "maps":         "http://wiki.faforever.com/index.php?title=Map_Vault",
     "rules":        "http://wiki.faforever.com/index.php?title=FAF_Client/Forum_Rules",
     "connection":   "http://wiki.faforever.com/index.php?title=Connection_issues_and_solutions",
     "tournaments":  "http://wiki.faforever.com/index.php?title=Tournaments",
+}
+WIKI_LINKS_SYNONYMES = {
+    "tournament":   WIKI_LINKS["tournaments"]
 }

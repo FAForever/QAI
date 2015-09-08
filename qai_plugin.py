@@ -14,7 +14,7 @@ from urllib.parse import urlparse, parse_qs
 
 import challonge
 from taunts import TAUNTS, SPAM_PROTECT_TAUNTS, KICK_TAUNTS
-from links import LINKS, WIKI_LINKS
+from links import LINKS, LINKS_SYNONYMES, WIKI_LINKS, WIKI_LINKS_SYNONYMES
 
 ALL_TAUNTS = [] # extended in init
 TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+Forged+Alliance" #add the game name at the end of the link (space = "+", eg: Game+Name)
@@ -149,6 +149,12 @@ class Plugin(object):
             %%link <argument>
         """
         try:
+            self.bot.privmsg(target, LINKS_SYNONYMES[args['<argument>']])
+            return
+        except:
+            pass
+
+        try:
             self.bot.privmsg(target, LINKS[args['<argument>']])
         except:
             if self.spam_protect('links', mask, target, args):
@@ -174,6 +180,12 @@ class Plugin(object):
             %%wiki
             %%wiki <argument>
         """
+        try:
+            self.bot.privmsg(target, WIKI_LINKS_SYNONYMES[args['<argument>']])
+            return
+        except:
+            pass
+
         try:
             self.bot.privmsg(target, WIKI_LINKS[args['<argument>']])
         except:
