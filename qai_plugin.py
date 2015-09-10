@@ -162,7 +162,7 @@ class Plugin(object):
 
             msg = ""
             if not args['<argument>'] is None:
-                msg = "Unkown value: \"" + args['<argument>'] + "\". "
+                msg = "Unknown link: \"" + args['<argument>'] + "\". "
             msg += "Do you mean one of these: "
             isFirst = True
             for key in LINKS.keys():
@@ -194,7 +194,7 @@ class Plugin(object):
 
             msg = ""
             if not args['<argument>'] is None:
-                msg = "Unknown link: \"" + args['<argument>'] + "\". Do you mean one of these: "
+                msg = "Unknown wiki link: \"" + args['<argument>'] + "\". Do you mean one of these: "
             else:
                 msg = LINKS["wiki"] + " For better matches try !wiki " 
             isFirst = True
