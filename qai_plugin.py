@@ -194,7 +194,7 @@ class Plugin(object):
 
             msg = ""
             if not args['<argument>'] is None:
-                msg = "Unkown value: \"" + args['<argument>'] + "\". Do you mean one of these: "
+                msg = "Unknown link: \"" + args['<argument>'] + "\". Do you mean one of these: "
             else:
                 msg = LINKS["wiki"] + " For better matches try !wiki " 
             isFirst = True
