@@ -29,13 +29,12 @@ LINKS_SYNONYMES["parser"] = LINKS_SYNONYMES["replays"] = LINKS_SYNONYMES["parser
 LINKS_SYNONYMES["wwpc2v2"] = LINKS_SYNONYMES["wwpc2x2"] = LINKS_SYNONYMES["2x2wwpc"] = LINKS["2v2wwpc"]
 
 WIKI_LINKS = {
+    "adjacency":         "Information on the adjacency bonus: http://wiki.faforever.com/index.php?title=Adjacency_Bonus",
     "avatars":           "Avatars and how to get them: http://wiki.faforever.com/index.php?title=FAF_chat#Avatars",
     "balance":           "How game quality works: http://wiki.faforever.com/index.php?title=The_game_balance_index",
     "chat":              "The FAF chat tab: http://wiki.faforever.com/index.php?title=FAF_chat",
-    "clans":             "Info on the FAF clans: http://wiki.faforever.com/index.php?title=Clans",
     "connection":        "Help with connection issues: http://wiki.faforever.com/index.php?title=Connection_issues_and_solutions",
     "coop":              "The coop missions and campaign: http://wiki.faforever.com/index.php?title=Coop_Missions",
-    "council":           "Info on the Council Of Setons: http://wiki.faforever.com/index.php?title=User_Groups#Council_of_Setons",
     "engymod":           "The integrated Engy Mod: http://wiki.faforever.com/index.php?title=Game_Modifications_(Mods)#Engy_Mod",
     "galacticwar":       "Galactic war and playing it: http://wiki.faforever.com/index.php?title=Galactic_War",
     "hostgame":          "How to host and join games: http://wiki.faforever.com/index.php?title=Host_and_join_games",
@@ -43,6 +42,7 @@ WIKI_LINKS = {
     "ladder":            "Info on the FAF 1v1 ladder: http://wiki.faforever.com/index.php?title=The_Ladder",
     "ladderpool":        "The Current Ladder map pool: http://wiki.faforever.com/index.php?title=The_Ladder#Map_Pool",
     "leaderboards":      "The 1v1 Ladder Leaderboards: http://wiki.faforever.com/index.php?title=Leaderboards_and_Rating",
+    "mapeditor":         "Getting and using the map editor: http://wiki.faforever.com/index.php?title=Map_Editor",
     "irc":               "Connecting to and using FAF chat with IRC: http://wiki.faforever.com/index.php?title=Chat_/_IRC_server",
     "maps":              "The FAF Map Vault: http://wiki.faforever.com/index.php?title=Map_Vault",
     "mapdownload":       "How to download maps: http://wiki.faforever.com/index.php?title=Map_Vault#3._Download_button",
@@ -57,7 +57,6 @@ WIKI_LINKS = {
     "trainers":          "List of personal trainers in FAF: http://wiki.faforever.com/index.php?title=User_Groups#Trainers",
     "trueskill":         "Trueskill explained: http://wiki.faforever.com/index.php?title=How_Trueskill_works",
     "tutorials":         "Help with learning how to play: http://wiki.faforever.com/index.php?title=Learning_SupCom",
-    "tutorialvideos":    "Tutorial videos: http://wiki.faforever.com/index.php?title=Learning_SupCom#Tutorial_Videos",
 }
 WIKI_LINKS_SYNONYMES = {
     "patchnotes":       WIKI_LINKS["patches"],
@@ -65,5 +64,7 @@ WIKI_LINKS_SYNONYMES = {
     "missions":         WIKI_LINKS["coop"],
     "training":         WIKI_LINKS["trainers"],
     "chattab":          WIKI_LINKS["chat"],
+    "voice":            WIKI_LINKS["mumble"],
+    "voicechat":        WIKI_LINKS["mumble"],
 }
 
