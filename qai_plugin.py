@@ -12,9 +12,11 @@ from irc3.plugins.command import command
 import time
 from urllib.parse import urlparse, parse_qs
 
-from taunts import TAUNTS, SPAM_PROTECT_TAUNTS
-from links import LINKS
+import challonge
+from taunts import TAUNTS, SPAM_PROTECT_TAUNTS, KICK_TAUNTS
+from links import LINKS, LINKS_SYNONYMES, WIKI_LINKS, WIKI_LINKS_SYNONYMES
 
+ALL_TAUNTS = [] # extended in init
 TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+Forged+Alliance" #add the game name at the end of the link (space = "+", eg: Game+Name)
 HITBOX_STREAMS = "https://api.hitbox.tv/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
 YOUTUBE_SEARCH = "https://www.googleapis.com/youtube/v3/search?safeSearch=strict&order=date&part=snippet&q=Forged%2BAlliance&maxResults=15&key={}"
@@ -31,8 +33,12 @@ class Plugin(object):
 
     def __init__(self, bot):
         self.bot = bot
-        self.timers = {'casts': {}, 'streams': {}, 'links': {}}
+        self.timers = {}
         self._rage = {}
+        global ALL_TAUNTS
+        ALL_TAUNTS.extend(TAUNTS)
+        ALL_TAUNTS.extend(SPAM_PROTECT_TAUNTS)
+        challonge.setChallongeData(self.bot.config['challonge_username'], self.bot.config['challonge_api_key'])
 
     @classmethod
     def reload(cls, old):
@@ -56,7 +62,7 @@ class Plugin(object):
     @asyncio.coroutine
     def on_privmsg(self, *args, **kwargs):
         msg, channel, sender = kwargs['data'], kwargs['target'], kwargs['mask']
-        if 'QAI' in sender.nick:
+        if self.bot.config['nick'] in sender.nick:
             return
         try:
             link_url = re.match(URL_MATCH, msg).groups()[0]
@@ -70,12 +76,12 @@ class Plugin(object):
                                                             views=data['statistics']['viewCount'],
                                                             likes=data['statistics']['likeCount'],
                                                             sender=sender.nick))
-        except (KeyError, ValueError, AttributeError):
+        except (KeyError, ValueError, AttributeError, IndexError):
             pass
         try:
             replayId = re.match(REPLAY_MATCH, msg).groups()[0]
             url = LINKS["replay"].replace("ID", replayId)
-            self.bot.privmsg(channel, "Replay link: %s" % url.replace('#', ''))
+            self.bot.privmsg(channel, url.replace('#', ''))
         except:
             pass
 
@@ -87,7 +93,7 @@ class Plugin(object):
             %%taunt <person>
         """
         p = args.get('<person>')
-        if p == 'QAI':
+        if p == self.bot.config['nick']:
             p = mask.nick
         self._taunt(channel=target, prefix=p)
 
@@ -98,6 +104,14 @@ class Plugin(object):
             %%explode
         """
         self.bot.action(target, "explodes")
+
+    @command(permission='admin')
+    def hug(self, mask, target, args):
+        """Hug someone
+
+            %%hug <someone>
+        """
+        self.bot.action(target, "hugs " + args['<someone>'])
 
     @command(permission='admin')
     def flip(self, mask, target, args):
@@ -135,6 +149,12 @@ class Plugin(object):
             %%link <argument>
         """
         try:
+            self.bot.privmsg(target, LINKS_SYNONYMES[args['<argument>']])
+            return
+        except:
+            pass
+
+        try:
             self.bot.privmsg(target, LINKS[args['<argument>']])
         except:
             if self.spam_protect('links', mask, target, args):
@@ -142,7 +162,7 @@ class Plugin(object):
 
             msg = ""
             if not args['<argument>'] is None:
-                msg = "Unkown value: \"" + args['<argument>'] + "\"."
+                msg = "Unknown link: \"" + args['<argument>'] + "\". "
             msg += "Do you mean one of these: "
             isFirst = True
             for key in LINKS.keys():
@@ -151,6 +171,40 @@ class Plugin(object):
                 isFirst = False
                 msg += key
             msg += " ?"
+            self.bot.privmsg(target, msg)
+
+    @command
+    def wiki(self, mask, target, args):
+        """Link to a wiki page
+
+            %%wiki
+            %%wiki <argument>
+        """
+        try:
+            self.bot.privmsg(target, WIKI_LINKS_SYNONYMES[args['<argument>']])
+            return
+        except:
+            pass
+
+        try:
+            self.bot.privmsg(target, WIKI_LINKS[args['<argument>']])
+        except:
+            if self.spam_protect('wiki', mask, target, args):
+                return
+
+            msg = ""
+            if not args['<argument>'] is None:
+                msg = "Unknown wiki link: \"" + args['<argument>'] + "\". Do you mean one of these: "
+            else:
+                msg = LINKS["wiki"] + " For better matches try !wiki " 
+            isFirst = True
+            for key in WIKI_LINKS.keys():
+                if not isFirst:
+                    msg += " / "
+                isFirst = False
+                msg += key
+            if not args['<argument>'] is None:
+                msg += " ?"
             self.bot.privmsg(target, msg)
 
     @command(permission='admin', public=False)
@@ -169,7 +223,7 @@ class Plugin(object):
 
             %%reload
         """
-        self.bot.reload('qai')
+        self.bot.reload(self.bot.config['nick'])
 
     @command(permission='admin')
     def slap(self, mask, target, args):
@@ -183,7 +237,7 @@ class Plugin(object):
         if channel is None:
             channel = "#qai_channel"
         if tauntTable is None:
-            tauntTable = TAUNTS
+            tauntTable = ALL_TAUNTS
         if prefix is None:
             prefix = ''
         else:
@@ -249,6 +303,8 @@ class Plugin(object):
             pass
 
     def spam_protect(self, cmd, mask, target, args):
+        if not cmd in self.timers:
+            self.timers[cmd] = {}
         if not target in self.timers[cmd]:
             self.timers[cmd][target] = 0
         if time.time() - self.timers[cmd][target] <= self.bot.config['spam_protect_time']:
@@ -257,10 +313,12 @@ class Plugin(object):
             except:
                 self._rage[mask.nick] = 1
 
-            self._taunt(channel=target, prefix=mask.nick, tauntTable=SPAM_PROTECT_TAUNTS)
             if self._rage[mask.nick] >= self.bot.config['rage_to_kick']:
+                self._taunt(channel=target, prefix=mask.nick, tauntTable=KICK_TAUNTS)
                 self.bot.privmsg(target, "!kick {}".format(mask.nick))
                 self._rage[mask.nick] = 1
+            else:  
+                self._taunt(channel=target, prefix=mask.nick, tauntTable=SPAM_PROTECT_TAUNTS)
             return True
         self._rage = {}
         self.timers[cmd][target] = time.time()
@@ -351,4 +409,19 @@ class Plugin(object):
             del self.bot.db['chatlists'][channel][user]
             self.bot.privmsg(mask.nick, "OK removed %s from %s" % (user, channel))
 
+    @command
+    @asyncio.coroutine
+    def tourneys(self, mask, target, args):
+        """Check tourneys
 
+            %%tourneys
+        """
+        if self.spam_protect('tourneys', mask, target, args):
+            return
+        tourneys = yield from challonge.printable_tourney_list()
+        if len(tourneys) < 1:
+            self.bot.privmsg(target, "No tourneys found!")
+
+        self.bot.privmsg(target, str(len(tourneys)) + " tourneys:")
+        for tourney in tourneys:
+            self.bot.action(target, tourney)
