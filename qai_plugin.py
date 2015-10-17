@@ -80,8 +80,9 @@ class Plugin(object):
             pass
         try:
             replayId = re.match(REPLAY_MATCH, msg).groups()[0]
-            url = LINKS["replay"].replace("ID", replayId)
-            self.bot.privmsg(channel, url.replace('#', ''))
+            if replayId < 1000000:
+                url = LINKS["replay"].replace("ID", replayId)
+                self.bot.privmsg(channel, url.replace('#', ''))
         except:
             pass
 
