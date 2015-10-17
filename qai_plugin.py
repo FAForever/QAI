@@ -110,9 +110,16 @@ class Plugin(object):
     def hug(self, mask, target, args):
         """Hug someone
 
+            %%hug
             %%hug <someone>
         """
-        self.bot.action(target, "hugs " + args['<someone>'])
+        someone = args['<someone>']
+        if someone == None:
+            someone = mask.nick
+        elif someone == self.bot.config['nick']:
+            self._taunt(channel=target, prefix=mask.nick)
+            return
+        self.bot.action(target, "hugs " + someone)
 
     @command(permission='admin')
     def flip(self, mask, target, args):
