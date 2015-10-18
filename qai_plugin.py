@@ -56,7 +56,10 @@ class Plugin(object):
         if channel == '#aeolus':
             for channel in self.bot.db['chatlists']:
                 if mask.nick in self.bot.db['chatlists'].get(channel, {}).keys():
-                    self.bot.privmsg('OperServ', 'svsjoin %s %s' % (mask.nick, channel))
+                    self.move_user(channel, mask.nick)
+
+    def move_user(self, channel, nick):
+        self.bot.privmsg('OperServ', 'svsjoin %s %s' % (nick, channel))
 
     @irc3.event(irc3.rfc.PRIVMSG)
     @asyncio.coroutine
@@ -390,6 +393,16 @@ class Plugin(object):
             return self.bot.db['blacklist'].get('users', {})
 
     @command(permission='chatlist')
+    def move(self, mask, target, args):
+        """Move nick into channel
+
+            %%move <nick> <channel>
+        """
+        channel, nick = args.get('<channel>'), args.get('<nick>')
+        self.move_user(channel, nick)
+        self.bot.privmsg(mask.nick, "OK moved %s to %s" % (nick, channel))
+
+    @command(permission='chatlist')
     def chatlist(self, mask, target, args):
         """Chat lists
 
@@ -411,7 +424,8 @@ class Plugin(object):
             if channel not in self.bot.db['chatlists']:
                 self.bot.db['chatlists'][channel] = {}
             self.bot.db['chatlists'][channel][user] = True
-            self.bot.privmsg(mask.nick, "OK added %s to %s" % (user, channel))
+            self.move_user(channel, user)
+            self.bot.privmsg(mask.nick, "OK added and moved %s to %s" % (user, channel))
         elif remove:
             if channel not in self.bot.db['chatlists']:
                 self.bot.db['chatlists'][channel] = {}
