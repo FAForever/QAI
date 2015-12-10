@@ -21,6 +21,7 @@ TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+
 HITBOX_STREAMS = "https://api.hitbox.tv/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
 YOUTUBE_SEARCH = "https://www.googleapis.com/youtube/v3/search?safeSearch=strict&order=date&part=snippet&q=Forged%2BAlliance&maxResults=15&key={}"
 YOUTUBE_DETAIL = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id={}&key={}"
+LETMEGOOGLE = "http://lmgtfy.com/?q="
 URL_MATCH = ".*(https?:\/\/[^ ]+\.[^ ]*).*"
 REPLAY_MATCH = ".*(#[0-9]+).*"
 
@@ -431,6 +432,21 @@ class Plugin(object):
                 self.bot.db['chatlists'][channel] = {}
             del self.bot.db['chatlists'][channel][user]
             self.bot.privmsg(mask.nick, "OK removed %s from %s" % (user, channel))
+
+    @command
+    def google(self, mask, target, args):
+        """google
+
+            %%google WORDS ...
+        """
+        link = LETMEGOOGLE
+        isFirst = True
+        for word in args.get('WORDS'):
+            if not isFirst:
+                link += "+"
+            isFirst = False
+            link += word
+        self.bot.privmsg(target, link)
 
     @command
     @asyncio.coroutine
