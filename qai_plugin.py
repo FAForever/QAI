@@ -176,14 +176,7 @@ class Plugin(object):
             msg = ""
             if not args['<argument>'] is None:
                 msg = "Unknown link: \"" + args['<argument>'] + "\". "
-            msg += "Do you mean one of these: "
-            isFirst = True
-            for key in LINKS.keys():
-                if not isFirst:
-                    msg += " / "
-                isFirst = False
-                msg += key
-            msg += " ?"
+            msg += "Do you mean one of these: " + " / ".join(LINKS.keys()) + " ?"
             self.bot.privmsg(target, msg)
 
     @command
@@ -210,12 +203,7 @@ class Plugin(object):
                 msg = "Unknown wiki link: \"" + args['<argument>'] + "\". Do you mean one of these: "
             else:
                 msg = LINKS["wiki"] + " For better matches try !wiki " 
-            isFirst = True
-            for key in WIKI_LINKS.keys():
-                if not isFirst:
-                    msg += " / "
-                isFirst = False
-                msg += key
+            msg += " / ".join(WIKI_LINKS.keys())
             if not args['<argument>'] is None:
                 msg += " ?"
             self.bot.privmsg(target, msg)
@@ -439,13 +427,7 @@ class Plugin(object):
 
             %%google WORDS ...
         """
-        link = LETMEGOOGLE
-        isFirst = True
-        for word in args.get('WORDS'):
-            if not isFirst:
-                link += "+"
-            isFirst = False
-            link += word
+        link = LETMEGOOGLE + "+".join(args.get('WORDS'))
         self.bot.privmsg(target, link)
 
     @command
