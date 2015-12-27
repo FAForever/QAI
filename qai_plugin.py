@@ -19,6 +19,7 @@ from links import LINKS, LINKS_SYNONYMES, WIKI_LINKS, WIKI_LINKS_SYNONYMES
 ALL_TAUNTS = [] # extended in init
 TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+Forged+Alliance" #add the game name at the end of the link (space = "+", eg: Game+Name)
 HITBOX_STREAMS = "https://api.hitbox.tv/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
+YOUTUBE_NON_API_SEARCH_LINK = "https://www.youtube.com/results?search_query=supreme+commander+%7C+forged+alliance&search_sort=video_date_uploaded&filters=video"
 YOUTUBE_SEARCH = "https://www.googleapis.com/youtube/v3/search?order=date&type=video&part=snippet&q=Forged%2BAlliance|Supreme%2BCommander&relevanceLanguage=eng&maxResults=15&key={}"
 YOUTUBE_DETAIL = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id={}&key={}"
 LETMEGOOGLE = "http://lmgtfy.com/?q="
@@ -302,6 +303,7 @@ class Plugin(object):
                         pass
         except (KeyError):
             pass
+        self.bot.action(target, "Find more here: {}".format(YOUTUBE_NON_API_SEARCH_LINK))
 
     def spam_protect(self, cmd, mask, target, args):
         if not cmd in self.timers:
