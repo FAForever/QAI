@@ -76,10 +76,9 @@ def printable_tourney_list():
         try:
             description = tourney['tournament'].get("description")
 
-            tourney_strings.append("{name}: {description} ({link}) - {participants} signups".format(
+            tourney_strings.append("{name}: ({link}) - {participants} signups".format(
                 **{
                     "name": tourney['tournament'].get("name", "Untitled"),
-                    "description": re.sub("<[^<>]+>", "", re.sub("(<span>|\r\n|\n|\.|\?|http|www).*", "", description)),
                     "link": tourney['tournament'].get("full_challonge_url"),
                     "participants": tourney['tournament'].get("participants_count"),
                 }))
