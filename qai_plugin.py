@@ -161,6 +161,7 @@ class Plugin(object):
 
             %%link
             %%link <argument>
+            %%link <argument> WORDS...
         """
         try:
             self.bot.privmsg(target, LINKS_SYNONYMES[args['<argument>']])
@@ -186,6 +187,7 @@ class Plugin(object):
 
             %%wiki
             %%wiki <argument>
+            %%wiki <argument> WORDS...
         """
         try:
             self.bot.privmsg(target, WIKI_LINKS_SYNONYMES[args['<argument>']])
