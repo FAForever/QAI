@@ -14,7 +14,7 @@ from urllib.parse import urlparse, parse_qs
 
 import challonge
 from taunts import TAUNTS, SPAM_PROTECT_TAUNTS, KICK_TAUNTS
-from links import LINKS, LINKS_SYNONYMES, WIKI_LINKS, WIKI_LINKS_SYNONYMES
+from links import LINKS, LINKS_SYNONYMES, WIKI_LINKS, WIKI_LINKS_SYNONYMES, OTHER_LINKS
 
 ALL_TAUNTS = [] # extended in init
 TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+Forged+Alliance" #add the game name at the end of the link (space = "+", eg: Game+Name)
@@ -432,6 +432,21 @@ class Plugin(object):
             %%google WORDS ...
         """
         link = LETMEGOOGLE + "+".join(args.get('WORDS'))
+        self.bot.privmsg(target, link)
+
+    @command
+    def name(self, mask, target, args):
+        """name
+
+            %%name
+            %%name <username>
+            %%name <username> WORDS ...
+        """
+        name = args.get('<username>')
+        if name == None:
+            self.bot.privmsg(target, LINKS["namechange"])
+            return
+        link = OTHER_LINKS["oldnames"] + name
         self.bot.privmsg(target, link)
 
     @command

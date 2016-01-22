@@ -68,3 +68,7 @@ WIKI_LINKS_SYNONYMES = {
     "voicechat":        WIKI_LINKS["mumble"],
 }
 
+
+OTHER_LINKS = {
+    "oldnames":        "http://app.faforever.com/faf/userName.php?name=",
+}
