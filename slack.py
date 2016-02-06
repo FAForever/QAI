@@ -2,17 +2,20 @@ import json
 import asyncio
 import websockets
 from slacker import Slacker
+from slackclient import SlackClient
 
 APIKEY = ""
 SLACK = None
-CON = ""
+SC = None
+CON = None
 DATA = {}
 
 
 def setSlackData(apikey):
-    global APIKEY, SLACK
+    global APIKEY, SLACK, SC
     APIKEY = apikey
     SLACK = Slacker(APIKEY)
+    SC = SlackClient(APIKEY)
 
 
 def start():
@@ -30,8 +33,7 @@ def start():
             'name': channel['name'],
         }
 
-    printTests()
-
+    #printTests()
 
 
 def getUserId(name):
@@ -47,6 +49,31 @@ def getId(sub, name):
         if DATA[sub][key]['name'] == name:
             return key
     return None
+
+
+def getPmChannelId(name):
+    user = getUserId(name)
+    if user == None:
+        return None
+    channelId = DATA['users'][user].get('pm_channel_id')
+    if channelId == None:
+        data = json.loads((SC.api_call("im.open", user=user)).decode())
+        channelId = data["channel"]["id"]
+        DATA['users'][user]['pm_channel_id'] = channelId
+    return channelId
+
+
+def sendMessageToUser(user, text):
+    channelId = getPmChannelId(user)
+    if channelId == None:
+        return
+    SC.api_call(
+        "chat.postMessage",
+        asUser="true:",
+        channel=channelId,
+        text=text)
+
+
 
 
 
