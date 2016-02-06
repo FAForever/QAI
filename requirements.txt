@@ -3,3 +3,5 @@ aiomysql
 configobj
 irc3
 pytest
+slacker
+websockets

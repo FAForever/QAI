@@ -12,6 +12,7 @@ from irc3.plugins.command import command
 import time
 from urllib.parse import urlparse, parse_qs
 
+import slack
 import challonge
 from taunts import TAUNTS, SPAM_PROTECT_TAUNTS, KICK_TAUNTS
 from links import LINKS, LINKS_SYNONYMES, WIKI_LINKS, WIKI_LINKS_SYNONYMES, OTHER_LINKS
@@ -41,6 +42,8 @@ class Plugin(object):
         ALL_TAUNTS.extend(TAUNTS)
         ALL_TAUNTS.extend(SPAM_PROTECT_TAUNTS)
         challonge.setChallongeData(self.bot.config['challonge_username'], self.bot.config['challonge_api_key'])
+        slack.setSlackData(self.bot.config['slack_api_key'])
+        slack.start()
 
     @classmethod
     def reload(cls, old):

@@ -22,6 +22,8 @@ challonge_username = faftd
 challonge_api_key = howAboutNo
 tourney_announcement_interval = 3600
 
+slack_api_key = howAboutNo
+
 spam_protect_time = 120
 rage_to_kick = 3
 
