@@ -1,39 +1,37 @@
 import json
 import asyncio
 import websockets
-from slacker import Slacker
 from slackclient import SlackClient
 
 APIKEY = ""
-SLACK = None
 SC = None
 CON = None
 DATA = {}
 
 
 def setSlackData(apikey):
-    global APIKEY, SLACK, SC
+    global APIKEY, SC
     APIKEY = apikey
-    SLACK = Slacker(APIKEY)
     SC = SlackClient(APIKEY)
 
 
 def start():
     global CON, DATA
-    CON = SLACK.rtm.start()
+    rebuildData()
+    #printTests()
 
+
+def rebuildData():
     DATA['users'] = {}
-    for user in CON.body['users']:
+    for user in json.loads((SC.api_call("users.list")).decode()).get('members'):
         DATA['users'][user['id']] = {
             'name': user['name'],
         }
     DATA['channels'] = {}
-    for channel in CON.body['channels']:
+    for channel in json.loads((SC.api_call("channels.list")).decode()).get('channels'):
         DATA['channels'][channel['id']] = {
             'name': channel['name'],
         }
-
-    #printTests()
 
 
 def getUserId(name):
