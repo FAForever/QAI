@@ -28,6 +28,7 @@ LETMEGOOGLE = "http://lmgtfy.com/?q="
 URL_MATCH = ".*(https?:\/\/[^ ]+\.[^ ]*).*"
 REPLAY_MATCH = ".*(#[0-9]+).*"
 
+
 @irc3.extend
 def action(bot, *args):
     bot.privmsg(args[0], '\x01ACTION ' + args[1] + '\x01')
@@ -43,11 +44,10 @@ class Plugin(object):
         ALL_TAUNTS.extend(TAUNTS)
         ALL_TAUNTS.extend(SPAM_PROTECT_TAUNTS)
         challonge.setChallongeData(self.bot.config['challonge_username'], self.bot.config['challonge_api_key'])
-        #slack.setSlackData(self.bot.config['slack_api_key'])
-        #slack.start()
-        slackThread = slack.slackThread(self.bot.config['slack_api_key'])
-        slackThread.daemon = True
-        slackThread.start()
+
+        self.slackThread = slack.slackThread(self.bot.config['slack_api_key'])
+        self.slackThread.daemon = True
+        self.slackThread.start()
 
     @classmethod
     def reload(cls, old):
