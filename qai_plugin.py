@@ -11,6 +11,7 @@ import irc3
 from irc3.plugins.command import command
 import time
 from urllib.parse import urlparse, parse_qs
+import threading
 
 import slack
 import challonge
@@ -42,8 +43,11 @@ class Plugin(object):
         ALL_TAUNTS.extend(TAUNTS)
         ALL_TAUNTS.extend(SPAM_PROTECT_TAUNTS)
         challonge.setChallongeData(self.bot.config['challonge_username'], self.bot.config['challonge_api_key'])
-        slack.setSlackData(self.bot.config['slack_api_key'])
-        slack.start()
+        #slack.setSlackData(self.bot.config['slack_api_key'])
+        #slack.start()
+        slackThread = slack.slackThread(self.bot.config['slack_api_key'])
+        slackThread.daemon = True
+        slackThread.start()
 
     @classmethod
     def reload(cls, old):
