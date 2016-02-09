@@ -8,6 +8,9 @@ port = 6667
 includes =
     irc3.plugins.command
     qai_plugin
+    #irc3.plugins.storage
+
+#storage = json://db.json
 
 autojoins =
     qai_channel
@@ -26,6 +29,9 @@ slack_api_key = howAboutNo
 
 spam_protect_time = 120
 rage_to_kick = 3
+
+report_to_irc_threshold = 1
+report_to_slack_threshold = 3
 
 [irc3.plugins.command]
 antiflood = true

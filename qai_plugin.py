@@ -19,6 +19,7 @@ from taunts import TAUNTS, SPAM_PROTECT_TAUNTS, KICK_TAUNTS
 from links import LINKS, LINKS_SYNONYMES, WIKI_LINKS, WIKI_LINKS_SYNONYMES, OTHER_LINKS
 
 ALL_TAUNTS = [] # extended in init
+BADWORDS = {}
 TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+Forged+Alliance" #add the game name at the end of the link (space = "+", eg: Game+Name)
 HITBOX_STREAMS = "https://api.hitbox.tv/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
 YOUTUBE_NON_API_SEARCH_LINK = "https://www.youtube.com/results?search_query=supreme+commander+%7C+forged+alliance&search_sort=video_date_uploaded&filters=video"
@@ -59,6 +60,8 @@ class Plugin(object):
     @irc3.event(irc3.rfc.CONNECTED)
     def nickserv_auth(self, *args, **kwargs):
         self.bot.privmsg('nickserv', 'identify %s' % self.bot.config['nickserv_password'])
+        global BADWORDS
+        BADWORDS = self.bot.db['badwords'].get('words', {}) #doing this here to init BADWORDS after the bot got its db
 
     @irc3.event(irc3.rfc.JOIN)
     def on_join(self, channel, mask):
@@ -90,6 +93,7 @@ class Plugin(object):
                                                             sender=sender.nick))
         except (KeyError, ValueError, AttributeError, IndexError):
             pass
+
         try:
             replayId = re.match(REPLAY_MATCH, msg).groups()[0]
             replayId = replayId.replace('#', '')
@@ -98,6 +102,16 @@ class Plugin(object):
                 self.bot.privmsg(channel, url)
         except:
             pass
+
+        for badword in BADWORDS:
+            if badword in msg:
+                text = 'User "{name}" used bad word "{word}" in irc channel "{channel}". Full text: "{text}".'.format(**{
+                        'name' : sender.nick,
+                        'word' : badword,
+                        'channel' : channel,
+                        'text' : msg,
+                    })
+                self.report(text, BADWORDS[badword])
 
     @command(permission='admin')
     def taunt(self, mask, target, args):
@@ -392,6 +406,46 @@ class Plugin(object):
         else:
             return self.bot.db['blacklist'].get('users', {})
 
+    @command(permission='admin', public=False)
+    def badwords(self, mask, target, args):
+        """Adds/removes a given keyword from the checklist 
+
+            %%badwords get
+            %%badwords add <word> <gravity>
+            %%badwords del <word>
+        """
+        global BADWORDS
+        if 'badwords' not in self.bot.db:
+            self.bot.db['badwords'] = {'words': {}}
+        add, delete, get, word, gravity = args.get('add'), args.get('del'), args.get('get'), args.get('<word>'), args.get('<gravity>')
+        if add:
+            try:
+                words = self.bot.db['badwords'].get('words', {})
+                words[word] = int(gravity)
+                self.bot.db.set('badwords', words=words)
+                BADWORDS = words
+                return 'Added "{word}" to watched badwords with gravity {gravity}'.format(**{
+                        "word": word,
+                        "gravity": gravity, 
+                    })
+            except:
+                return "Failed adding the word. Did you not use a number for the gravity?"
+        elif delete:
+            words = self.bot.db['badwords'].get('words', {})
+            if words.get(word):
+                del self.bot.db['badwords']['words'][word]
+                BADWORDS = self.bot.db['badwords'].get('words', {})
+                return 'Removed "{word}" from watched badwords'.format(**{
+                        "word": word,
+                    })
+            else:
+                return 'Word not found in the list.'
+        elif get:
+            words = self.bot.db['badwords'].get('words', {})
+            self.bot.privmsg(mask.nick, str(len(words)) + " checked badwords:")
+            for word in words.keys():
+                self.bot.privmsg(mask.nick, '  word: "%s", gravity: %s' % (word, words[word]))
+
     @command(permission='chatlist')
     def move(self, mask, target, args):
         """Move nick into channel
@@ -472,3 +526,10 @@ class Plugin(object):
         self.bot.privmsg(target, str(len(tourneys)) + " tourneys:")
         for tourney in tourneys:
             self.bot.action(target, tourney)
+
+    def report(self, text, gravity):
+        text = text + " (gravity {})".format(gravity)
+        if gravity >= self.bot.config['report_to_irc_threshold']:
+            self.bot.privmsg('#moderation', text)
+        if gravity >= self.bot.config['report_to_slack_threshold']:
+            self.slackThread.sendMessageToChannel("moderation", text)

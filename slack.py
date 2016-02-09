@@ -16,6 +16,7 @@ class slackThread(threading.Thread):
         self.handledEvents = {
             'message':      self.__event__message,
         }
+        self.ready = False
 
 
     def run(self):
@@ -29,7 +30,7 @@ class slackThread(threading.Thread):
             works = False
         if works:
             print('Established Slack connection')
-
+            self.ready = True
 
         countForPing = 0
         while True:
@@ -85,10 +86,11 @@ class slackThread(threading.Thread):
 
 
     def __getId(self, sub, name):
-        for key in self.DATA[sub].keys():
-            if self.DATA[sub][key]['name'] == name:
-                return key
-        return None
+        if self.ready:
+            for key in self.DATA[sub].keys():
+                if self.DATA[sub][key]['name'] == name:
+                    return key
+            return None
 
 
     def __getPmChannelId(self, name):
@@ -104,17 +106,29 @@ class slackThread(threading.Thread):
 
 
     def sendMessageToUser(self, user, text):
-        self.lock.acquire()
         channelId = self.__getPmChannelId(user)
         if channelId == None:
             return
+        self.__sendMessage(channelId, text)
+
+
+    def sendMessageToChannel(self, channel, text):
+        channelId = self.__getChannelId(channel)
+        if channelId == None:
+            return
+        self.__sendMessage(channelId, text)
+
+
+    def __sendMessage(self, target, text):
+        self.lock.acquire()
         self.SC.api_call(
             "chat.postMessage",
             as_user="true",
-            channel=channelId,
+            channel=target,
             text=text)
         self.lock.release()
 
 
     def __event__message(self, event):
-        print(self.DATA['users'][event['user']]['name'] + ": " + event['text'])
+        #print(self.DATA['users'][event['user']]['name'] + ": " + event['text'])
+        pass
