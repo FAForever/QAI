@@ -61,7 +61,9 @@ class Plugin(object):
     def nickserv_auth(self, *args, **kwargs):
         self.bot.privmsg('nickserv', 'identify %s' % self.bot.config['nickserv_password'])
         global BADWORDS
-        BADWORDS = self.bot.db['badwords'].get('words', {}) #doing this here to init BADWORDS after the bot got its db
+        if 'badwords' in self.bot.db:
+            if 'words' in self.bot.db['badwords']:
+                global BADWORDSBADWORDS = self.bot.db['badwords'].get('words', {}) #doing this here to init BADWORDS after the bot got its db
 
     @irc3.event(irc3.rfc.JOIN)
     def on_join(self, channel, mask):
