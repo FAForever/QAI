@@ -31,7 +31,10 @@ spam_protect_time = 120
 rage_to_kick = 3
 
 report_to_irc_threshold = 1
+report_to_irc_channel = moderation
 report_to_slack_threshold = 3
+report_to_slack_channel = qai-tests
+report_instant_kick_threshold = 4
 
 [irc3.plugins.command]
 antiflood = true

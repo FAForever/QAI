@@ -105,13 +105,7 @@ class Plugin(object):
 
         for badword in BADWORDS:
             if badword in msg:
-                text = 'User "{name}" used bad word "{word}" in irc channel "{channel}". Full text: "{text}".'.format(**{
-                        'name' : sender.nick,
-                        'word' : badword,
-                        'channel' : channel,
-                        'text' : msg,
-                    })
-                self.report(text, BADWORDS[badword])
+                self.report(sender.nick, badword, channel, msg, BADWORDS[badword])
 
     @command(permission='admin')
     def taunt(self, mask, target, args):
@@ -527,9 +521,18 @@ class Plugin(object):
         for tourney in tourneys:
             self.bot.action(target, tourney)
 
-    def report(self, text, gravity):
-        text = text + " (gravity {})".format(gravity)
+    def report(self, name, word, channel, text, gravity):
+        reportMsg = 'User "{name}" used bad word "{word}" in irc channel "{channel}". Full text: "{text}". (Gravity {gravity})'.format(**{
+                'name' : name,
+                'word' : word,
+                'channel' : channel,
+                'text' : text,
+                'gravity' : gravity,
+            })
         if gravity >= self.bot.config['report_to_irc_threshold']:
-            self.bot.privmsg('#moderation', text)
+            self.bot.privmsg('#' + self.bot.config['report_to_irc_channel'], reportMsg)
         if gravity >= self.bot.config['report_to_slack_threshold']:
-            self.slackThread.sendMessageToChannel("moderation", text)
+            self.slackThread.sendMessageToChannel(self.bot.config['report_to_slack_channel'], reportMsg)
+        if gravity >= self.bot.config['report_instant_kick_threshold']:
+            self._taunt(channel=channel, prefix=name, tauntTable=KICK_TAUNTS)
+            self.bot.privmsg(channel, "!kick {}".format(name))
