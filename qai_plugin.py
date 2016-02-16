@@ -63,7 +63,8 @@ class Plugin(object):
         global BADWORDS
         if 'badwords' in self.bot.db:
             if 'words' in self.bot.db['badwords']:
-                global BADWORDSBADWORDS = self.bot.db['badwords'].get('words', {}) #doing this here to init BADWORDS after the bot got its db
+                global BADWORDS
+                BADWORDS = self.bot.db['badwords'].get('words', {}) #doing this here to init BADWORDS after the bot got its db
 
     @irc3.event(irc3.rfc.JOIN)
     def on_join(self, channel, mask):
