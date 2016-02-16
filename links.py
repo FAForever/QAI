@@ -1,7 +1,7 @@
 LINKS = {
     "faf":        "FAF main page! http://www.faforever.com",
-    "forum":        "FAF Forum! http://forums.faforever.com/forums/index.php",
-    "support":      "Tech support! http://forums.faforever.com/forums/viewforum.php?f=3",
+    "forum":        "FAF Forum! http://forums.faforever.com/index.php",
+    "support":      "Tech support! http://forums.faforever.com/viewforum.php?f=3",
     "wiki":         "FAF Wiki! http://wiki.faforever.com/index.php?title=Main_Page",
     "news":         "What's new? http://www.faforever.com/news/",
 
@@ -16,8 +16,8 @@ LINKS = {
     "replayparser": "Replay parser: http://fafafaf.bitbucket.org/",
     "tumblr":       "FAF Reactions on tumblr: http://fafreactions.tumblr.com/",
 
-    "wwpc":         "World Wide People's Championship: http://forums.faforever.com/forums/viewtopic.php?f=26&t=10627",
-    "2v2wwpc":      "2v2 World Wide People's Championship: http://forums.faforever.com/forums/viewtopic.php?f=26&t=9059",
+    "wwpc":         "World Wide People's Championship: http://forums.faforever.com/viewtopic.php?f=26&t=10627",
+    "2v2wwpc":      "2v2 World Wide People's Championship: http://forums.faforever.com/viewtopic.php?f=26&t=9059",
 }
 LINKS_SYNONYMES = {
     "techsupport":  LINKS["support"],
