@@ -1,14 +1,14 @@
 LINKS = {
-    "faf":        "FAF main page! http://www.faforever.com",
+    "faf":          "FAF main page! http://www.faforever.com",
     "forum":        "FAF Forum! http://forums.faforever.com/index.php",
     "support":      "Tech support! http://forums.faforever.com/viewforum.php?f=3",
     "wiki":         "FAF Wiki! http://wiki.faforever.com/index.php?title=Main_Page",
     "news":         "What's new? http://www.faforever.com/news/",
 
-    "replay":       "Replay link: http://replay.faforever.com/ID",
-    "unitsdb":      "Unit database: http://content.faforever.com/faf/unitsDB/",
+    "replay":       "Replay link: content.faforever.com/faf/vault/replay_vault/replay.php?id=ID",
+    "unitsdb":      "Check out www.faforever.com/faf/unitsDB/ and spooky.github.io/unitdb/#/",
     "namechange":   "Change username: http://app.faforever.com/faf/userName.php",
-    "clans":        "FAF clans! http://www.faforever.com/clans/clans_list",
+    "clans":        "FAF clans! clans.faforever.com",
 
     "github":       "FAF on Github: https://github.com/FAForever",
     "youtube":      "FAF Youtube: https://www.youtube.com/channel/UCkAWiUu4QE172kv-ZuyR42w",
