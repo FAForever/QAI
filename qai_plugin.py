@@ -20,6 +20,8 @@ from links import LINKS, LINKS_SYNONYMES, WIKI_LINKS, WIKI_LINKS_SYNONYMES, OTHE
 
 ALL_TAUNTS = [] # extended in init
 BADWORDS = {}
+NICKSERVIDENTIFIEDRESPONSES = {}
+NICKSERVIDENTIFIEDRESPONSESLOCK = None
 TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+Forged+Alliance" #add the game name at the end of the link (space = "+", eg: Game+Name)
 HITBOX_STREAMS = "https://api.hitbox.tv/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
 YOUTUBE_NON_API_SEARCH_LINK = "https://www.youtube.com/results?search_query=supreme+commander+%7C+forged+alliance&search_sort=video_date_uploaded&filters=video"
@@ -41,10 +43,11 @@ class Plugin(object):
         self.bot = bot
         self.timers = {}
         self._rage = {}
-        global ALL_TAUNTS
+        global ALL_TAUNTS, NICKSERVIDENTIFIEDRESPONSESLOCK
         ALL_TAUNTS.extend(TAUNTS)
         ALL_TAUNTS.extend(SPAM_PROTECT_TAUNTS)
         challonge.setChallongeData(self.bot.config['challonge_username'], self.bot.config['challonge_api_key'])
+        NICKSERVIDENTIFIEDRESPONSESLOCK = threading.Lock()
 
         self.slackThread = slack.slackThread(self.bot.config['slack_api_key'])
         self.slackThread.daemon = True
@@ -109,33 +112,45 @@ class Plugin(object):
             if badword in msg:
                 self.report(sender.nick, badword, channel, msg, BADWORDS[badword])
 
+        if sender.startswith("NickServ!"):
+            self.__handleNickservMessage(msg)
+
     @command(permission='admin')
+    @asyncio.coroutine
     def taunt(self, mask, target, args):
         """Send a taunt
 
             %%taunt
             %%taunt <person>
         """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
         p = args.get('<person>')
         if p == self.bot.config['nick']:
             p = mask.nick
         self._taunt(channel=target, prefix=p)
 
     @command(permission='admin')
+    @asyncio.coroutine
     def explode(self, mask, target, args):
         """Explode
 
             %%explode
         """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
         self.bot.action(target, "explodes")
 
     @command(permission='admin')
+    @asyncio.coroutine
     def hug(self, mask, target, args):
         """Hug someone
 
             %%hug
             %%hug <someone>
         """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
         someone = args['<someone>']
         if someone == None:
             someone = mask.nick
@@ -145,28 +160,37 @@ class Plugin(object):
         self.bot.action(target, "hugs " + someone)
 
     @command(permission='admin')
+    @asyncio.coroutine
     def flip(self, mask, target, args):
         """Flip table
 
             %%flip
         """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
         self.bot.privmsg(target, "(╯°□°）╯︵ ┻━┻")
 
     @command(permission='admin')
+    @asyncio.coroutine
     def join(self, mask, target, args):
         """Overtake the given channel
 
             %%join <channel>
         """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
         self.bot.join(args['<channel>'])
 
     @command(permission='admin')
+    @asyncio.coroutine
     def leave(self, mask, target, args):
         """Leave the given channel
 
             %%leave
             %%leave <channel>
         """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
         channel = args['<channel>']
         if channel is None:
             channel = target
@@ -229,29 +253,38 @@ class Plugin(object):
             self.bot.privmsg(target, msg)
 
     @command(permission='admin', public=False)
+    @asyncio.coroutine
     def puppet(self, mask, target, args):
         """Puppet
 
             %%puppet <target> WORDS ...
         """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
         t = args.get('<target>')
         m = " ".join(args.get('WORDS'))
         self.bot.privmsg(t, m)
 
     @command(permission='admin', public=False)
+    @asyncio.coroutine
     def reload(self, mask, target, args):
         """Reboot the mainframe
 
             %%reload
         """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
         self.bot.reload(self.bot.config['nick'])
 
     @command(permission='admin')
+    @asyncio.coroutine
     def slap(self, mask, target, args):
         """Slap this guy
 
             %%slap <guy>
         """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
         self.bot.action(target, "slaps %s " % args['<guy>'])
 
     def _taunt(self, channel=None, prefix=None, tauntTable=None):
@@ -345,6 +378,31 @@ class Plugin(object):
         self._rage = {}
         self.timers[cmd][target] = time.time()
 
+    def __handleNickservMessage(self, message):
+        if message.startswith('STATUS'):
+            words = message.split(" ")
+            global NICKSERVIDENTIFIEDRESPONSES, NICKSERVIDENTIFIEDRESPONSESLOCK
+            NICKSERVIDENTIFIEDRESPONSESLOCK.acquire()
+            NICKSERVIDENTIFIEDRESPONSES[words[1]] = words[2]
+            NICKSERVIDENTIFIEDRESPONSESLOCK.release()
+
+    @asyncio.coroutine
+    def __isNickservIdentified(self, nick):
+        self.bot.privmsg('nickserv', "status {}".format(nick))
+        remainingTries = 20
+        while remainingTries > 0:
+            if NICKSERVIDENTIFIEDRESPONSES.get(nick):
+                value = NICKSERVIDENTIFIEDRESPONSES[nick]
+                NICKSERVIDENTIFIEDRESPONSESLOCK.acquire()
+                NICKSERVIDENTIFIEDRESPONSES[nick] = None
+                NICKSERVIDENTIFIEDRESPONSESLOCK.release()
+                if int(value) == 3:
+                    return True
+                return False
+            remainingTries -= 1
+            yield from asyncio.sleep(0.1)
+        return False
+
     @command
     @asyncio.coroutine
     def streams(self, mask, target, args):
@@ -385,12 +443,15 @@ class Plugin(object):
             self.bot.privmsg(target, "Nobody is streaming :'(")
 
     @command(permission='admin', public=False)
+    @asyncio.coroutine
     def blacklist(self, mask, target, args):
         """Blacklist given channel/user from !casts, !streams
 
             %%blacklist
             %%blacklist <user>
         """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
         if 'blacklist' not in self.bot.db:
             self.bot.db['blacklist'] = {'users': {}}
         user = args.get('<user>')
@@ -403,6 +464,7 @@ class Plugin(object):
             return self.bot.db['blacklist'].get('users', {})
 
     @command(permission='admin', public=False)
+    @asyncio.coroutine
     def badwords(self, mask, target, args):
         """Adds/removes a given keyword from the checklist 
 
@@ -410,6 +472,8 @@ class Plugin(object):
             %%badwords add <word> <gravity>
             %%badwords del <word>
         """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
         global BADWORDS
         if 'badwords' not in self.bot.db:
             self.bot.db['badwords'] = {'words': {}}
@@ -443,16 +507,20 @@ class Plugin(object):
                 self.bot.privmsg(mask.nick, '  word: "%s", gravity: %s' % (word, words[word]))
 
     @command(permission='chatlist')
+    @asyncio.coroutine
     def move(self, mask, target, args):
         """Move nick into channel
 
             %%move <nick> <channel>
         """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
         channel, nick = args.get('<channel>'), args.get('<nick>')
         self.move_user(channel, nick)
         self.bot.privmsg(mask.nick, "OK moved %s to %s" % (nick, channel))
 
     @command(permission='chatlist')
+    @asyncio.coroutine
     def chatlist(self, mask, target, args):
         """Chat lists
 
@@ -461,6 +529,8 @@ class Plugin(object):
             %%chatlist add <channel> <user>
             %%chatlist del <channel> <user>
         """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
         print(args)
         if 'chatlists' not in self.bot.db:
             self.bot.db['chatlists'] = {}
