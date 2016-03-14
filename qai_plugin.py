@@ -60,7 +60,6 @@ class Plugin(object):
     @irc3.event(irc3.rfc.CONNECTED)
     def nickserv_auth(self, *args, **kwargs):
         self.bot.privmsg('nickserv', 'identify %s' % self.bot.config['nickserv_password'])
-        global BADWORDS
         if 'badwords' in self.bot.db:
             if 'words' in self.bot.db['badwords']:
                 global BADWORDS
@@ -153,7 +152,7 @@ class Plugin(object):
         """
         self.bot.privmsg(target, "(╯°□°）╯︵ ┻━┻")
 
-    @command
+    @command(permission='admin')
     def join(self, mask, target, args):
         """Overtake the given channel
 
