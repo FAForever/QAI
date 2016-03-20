@@ -4,6 +4,7 @@ LINKS = {
     "support":      "Tech support! http://forums.faforever.com/viewforum.php?f=3",
     "wiki":         "FAF Wiki! http://wiki.faforever.com/index.php?title=Main_Page",
     "news":         "What's new? http://www.faforever.com/news/",
+    "dev":          "Tumblr Development Feed http://faforeverdevblog.tumblr.com/",
 
     "replay":       "Replay link: content.faforever.com/faf/vault/replay_vault/replay.php?id=ID",
     "unitsdb":      "Check out www.faforever.com/faf/unitsDB/ and spooky.github.io/unitdb/#/",
@@ -27,6 +28,7 @@ LINKS_SYNONYMES = {
 
 LINKS_SYNONYMES["parser"] = LINKS_SYNONYMES["replays"] = LINKS_SYNONYMES["parsereplay"] = LINKS["replayparser"]
 LINKS_SYNONYMES["wwpc2v2"] = LINKS_SYNONYMES["wwpc2x2"] = LINKS_SYNONYMES["2x2wwpc"] = LINKS["2v2wwpc"]
+LINKS_SYNONYMES["blog"] = LINKS_SYNONYMES["development"] = LINKS_SYNONYMES["devblog"] = LINKS["dev"]
 
 WIKI_LINKS = {
     "adjacency":         "Information on the adjacency bonus: http://wiki.faforever.com/index.php?title=Adjacency_Bonus",
