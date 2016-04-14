@@ -396,7 +396,7 @@ class Plugin(object):
             if NICKSERVIDENTIFIEDRESPONSES.get(nick):
                 value = NICKSERVIDENTIFIEDRESPONSES[nick]
                 NICKSERVIDENTIFIEDRESPONSESLOCK.acquire()
-                NICKSERVIDENTIFIEDRESPONSES[nick] = None
+                del NICKSERVIDENTIFIEDRESPONSES[nick]
                 NICKSERVIDENTIFIEDRESPONSESLOCK.release()
                 if int(value) == 3:
                     return True
@@ -449,21 +449,29 @@ class Plugin(object):
     def blacklist(self, mask, target, args):
         """Blacklist given channel/user from !casts, !streams
 
-            %%blacklist
-            %%blacklist <user>
+            %%blacklist get
+            %%blacklist add <user>
+            %%blacklist del <user>
         """
         if not (yield from self.__isNickservIdentified(mask.nick)):
             return
         if 'blacklist' not in self.bot.db:
             self.bot.db['blacklist'] = {'users': {}}
-        user = args.get('<user>')
+        add, delete, get, user = args.get('add'), args.get('del'), args.get('get'), args.get('<user>')
+        if get:
+            return self.bot.db['blacklist'].get('users', {})
         if user is not None:
             users = self.bot.db['blacklist'].get('users', {})
-            users[user] = True
-            self.bot.db.set('blacklist', users=users)
-            return "Added {} to blacklist".format(user)
-        else:
-            return self.bot.db['blacklist'].get('users', {})
+            if add:
+                users[user] = True
+                self.bot.db.set('blacklist', users=users)
+                return "Added {} to blacklist".format(user)
+            if delete:
+                if users.get(user):
+                    del users[user]
+                    return "Removed {} from the blacklist".format(user)
+                return "{} is not on the blacklist.".format(user)
+        return "Something went wrong."
 
     @command(permission='admin', public=False)
     @asyncio.coroutine
