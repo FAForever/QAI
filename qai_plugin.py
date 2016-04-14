@@ -337,8 +337,7 @@ class Plugin(object):
         try:
             for item in itertools.takewhile(lambda _: len(casts) < 5, data['items']):
                 channel_title = item['snippet']['channelTitle']
-                if channel_title not in self.bot.db['blacklist'].get('users', {}) \
-                        and channel_title != '':
+                if channel_title not in self.bot.db['blacklist'].get('users', {}) and channel_title != '':
                     casts.append(item)
                     try:
                         self.bot.action(target,
@@ -416,6 +415,14 @@ class Plugin(object):
             return
         streams = yield from self.hitbox_streams()
         streams.extend((yield from self.twitch_streams()))
+        blacklist = self.bot.db['blacklist'].get('users', {})
+        for stream in streams:
+            try:
+                if stream["media_display_name"] in blacklist:
+                    streams.remove(stream)
+            except:
+                if stream["channel"]["display_name"] in blacklist:
+                    streams.remove(stream)
 
         if len(streams) > 0:
             self.bot.privmsg(target, "%i streams online:" % len(streams))
