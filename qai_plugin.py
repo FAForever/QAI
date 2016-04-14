@@ -108,9 +108,11 @@ class Plugin(object):
         except:
             pass
 
-        for badword in BADWORDS:
-            if badword in msg:
-                self.report(sender.nick, badword, channel, msg, BADWORDS[badword])
+        if channel.startswith("#"):
+            lowercaseMsg = msg.lower()
+            for badword in BADWORDS:
+                if badword in lowercaseMsg:
+                    self.report(sender.nick, badword, channel, msg, BADWORDS[badword])
 
         if sender.startswith("NickServ!"):
             self.__handleNickservMessage(msg)
