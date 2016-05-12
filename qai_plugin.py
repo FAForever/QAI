@@ -15,11 +15,13 @@ import threading
 
 import slack
 import challonge
+import repetition
 from taunts import TAUNTS, SPAM_PROTECT_TAUNTS, KICK_TAUNTS
 from links import LINKS, LINKS_SYNONYMES, WIKI_LINKS, WIKI_LINKS_SYNONYMES, OTHER_LINKS
 
 ALL_TAUNTS = [] # extended in init
 BADWORDS = {}
+REPETITIONS = {}
 NICKSERVIDENTIFIEDRESPONSES = {}
 NICKSERVIDENTIFIEDRESPONSESLOCK = None
 TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+Forged+Alliance" #add the game name at the end of the link (space = "+", eg: Game+Name)
@@ -67,6 +69,13 @@ class Plugin(object):
             if 'words' in self.bot.db['badwords']:
                 global BADWORDS
                 BADWORDS = self.bot.db['badwords'].get('words', {}) #doing this here to init BADWORDS after the bot got its db
+        if 'repetitions' in self.bot.db:
+            if 'text' in self.bot.db['repetitions']:
+                text = self.bot.db['repetitions'].get('text', {})
+                global REPETITIONS
+                for t in text.keys():
+                    REPETITIONS[t] = repetition.repetitionThread(self.bot, text[t].get('channel'), text[t].get('text'), int(text[t].get('seconds')))
+                    REPETITIONS[t].start()
 
     @irc3.event(irc3.rfc.JOIN)
     def on_join(self, channel, mask):
@@ -522,6 +531,57 @@ class Plugin(object):
             self.bot.privmsg(mask.nick, str(len(words)) + " checked badwords:")
             for word in words.keys():
                 self.bot.privmsg(mask.nick, '  word: "%s", gravity: %s' % (word, words[word]))
+
+    @command(permission='admin', public=False)
+    @asyncio.coroutine
+    def repeat(self, mask, target, args):
+        """Makes QAI repeat WORDS in <channel> each <seconds>. Use <ID> to remove them again.
+
+            %%repeat get
+            %%repeat add <ID> <seconds> <channel> WORDS ...
+            %%repeat del <ID>
+        """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
+        global REPETITIONS
+        if 'repetitions' not in self.bot.db:
+            self.bot.db['repetitions'] = {'text': {}}
+        add, delete, get, ID, seconds, channel, WORDS = args.get('add'), args.get('del'), args.get('get'), args.get('<ID>'), args.get('<seconds>'), args.get('<channel>'), " ".join(args.get('WORDS'))
+        if get:
+            text = self.bot.db['repetitions'].get('text', {})
+            self.bot.privmsg(mask.nick, str(len(text)) + " texts repeating:")
+            for t in text.keys():
+                self.bot.privmsg(mask.nick, '  ID: "%s", each %i seconds, channel: %s, text: %s' % (t, text[t].get('seconds'), text[t].get('channel'), text[t].get('text')))
+        elif add:
+            try:
+                text = self.bot.db['repetitions'].get('text', {})
+                if text.get(ID):
+                    return "ID already exists. Pick another."
+                text[ID] = {
+                    "seconds": int(seconds),
+                    "text": WORDS,
+                    "channel": channel,
+                }
+                self.bot.db.set('repetitions', text=text)
+                REPETITIONS[ID] = repetition.repetitionThread(self.bot, channel, WORDS, int(seconds))
+                REPETITIONS[ID].daemon = True
+                REPETITIONS[ID].start()
+                return 'Done.'
+            except:
+                return "Failed adding the text."
+        elif delete:
+            try:
+                text = self.bot.db['repetitions'].get('text', {})
+                if text.get(ID):
+                    del text[ID]
+                    self.bot.db.set('repetitions', text=text)
+                    REPETITIONS[ID].stop()
+                    del REPETITIONS[ID]
+                    return 'Done.'
+                else:
+                    return "Not repeating something with ID <" + ID + ">"
+            except:
+                return "Failed deleting."
 
     @command(permission='chatlist')
     @asyncio.coroutine
