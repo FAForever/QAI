@@ -608,15 +608,14 @@ class Plugin(object):
         """
         if not (yield from self.__isNickservIdentified(mask.nick)):
             return
-        print(args)
         if 'chatlists' not in self.bot.db:
             self.bot.db['chatlists'] = {}
         channel, user, add, remove = args.get('<channel>'), args.get('<user>'), args.get('add'), args.get('del')
         if not add and not remove:
             if not channel:
-                self.bot.privmsg(mask.nick, repr(self.bot.db.get('chatlists')))
+                self.bot.privmsg(mask.nick, ", ".join(self.bot.db.get('chatlists')))
             else:
-                self.bot.privmsg(mask.nick, repr(self.bot.db['chatlists'].get(channel, {}).keys()))
+                self.bot.privmsg(mask.nick, ", ".join(self.bot.db['chatlists'].get(channel, {}).keys()))
         elif add:
             if channel not in self.bot.db['chatlists']:
                 self.bot.db['chatlists'][channel] = {}
@@ -627,6 +626,8 @@ class Plugin(object):
             if channel not in self.bot.db['chatlists']:
                 self.bot.db['chatlists'][channel] = {}
             del self.bot.db['chatlists'][channel][user]
+            if len(self.bot.db['chatlists'][channel]) == 0:
+                del self.bot.db['chatlists'][channel]
             self.bot.privmsg(mask.nick, "OK removed %s from %s" % (user, channel))
 
     @command
