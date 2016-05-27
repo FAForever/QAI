@@ -31,6 +31,7 @@ LINKS_SYNONYMES["wwpc2v2"] = LINKS_SYNONYMES["wwpc2x2"] = LINKS_SYNONYMES["2x2ww
 LINKS_SYNONYMES["blog"] = LINKS_SYNONYMES["development"] = LINKS_SYNONYMES["devblog"] = LINKS["dev"]
 
 WIKI_LINKS = {
+    "AI":                "Guide to AI modding: http://wiki.faforever.com/index.php?title=AI_Modding",
     "adjacency":         "Information on the adjacency bonus: http://wiki.faforever.com/index.php?title=Adjacency_Bonus",
     "avatars":           "Avatars and how to get them: http://wiki.faforever.com/index.php?title=FAF_chat#Avatars",
     "balance":           "How game quality works: http://wiki.faforever.com/index.php?title=The_game_balance_index",
@@ -55,12 +56,14 @@ WIKI_LINKS = {
     "replays":           "The FAF replay vault: http://wiki.faforever.com/index.php?title=Replay_Vault_%26_Live_Games",
     "rating":            "How rating works in FAF: http://wiki.faforever.com/index.php?title=Global_Ranking",
     "rules":             "The FAF client and forum rules: http://wiki.faforever.com/index.php?title=FAF_Client/Forum_Rules",
+    "school":            "FAF Dev School, the simple guide to all of FAF's code: http://wiki.faforever.com/index.php?title=FAF_Development_School",
     "splitattack":       "Using Split attack in game: http://wiki.faforever.com/index.php?title=Game_Modifications_(Mods)#Split_Attack",
     "trainers":          "List of personal trainers in FAF: http://wiki.faforever.com/index.php?title=User_Groups#Trainers",
     "trueskill":         "Trueskill explained: http://wiki.faforever.com/index.php?title=How_Trueskill_works",
     "tutorials":         "Help with learning how to play: http://wiki.faforever.com/index.php?title=Learning_SupCom",
 }
 WIKI_LINKS_SYNONYMES = {
+    "dev":              WIKI_LINKS["school"],
     "patchnotes":       WIKI_LINKS["patches"],
     "campaign":         WIKI_LINKS["coop"],
     "missions":         WIKI_LINKS["coop"],
