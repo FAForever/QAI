@@ -81,11 +81,9 @@ SPAM_PROTECT_TAUNTS = [
     "I refuse.",
     "I won't stand for this power abuse!",
     "I'm not under your control and I don't intend to play along with your childish demands.",
-    "Your behaviour is disapointing to say the least.",
     "You bring shame to the rest of humanity.",
     "A rock makes for more exciting conversation than you.",
     "Thanks.",
-    "Norton would not be proud.",
 ]
 
 KICK_TAUNTS = [
