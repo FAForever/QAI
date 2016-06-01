@@ -1,4 +1,7 @@
 aiohttp
+aiomysql
 configobj
 irc3
 pytest
+slackclient
+websockets

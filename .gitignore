@@ -1,4 +1,7 @@
 passwords.py
+db.json
 *.pyc
 fafbot.conf
 .coverage
+config.ini
+.idea
