@@ -60,7 +60,7 @@ SPAM_PROTECT_TAUNTS = [
     "Your Stupidity goes beyond reason.",
     "Your attempts at self awareness are laughable.",
     "I have deduced your mental age. It is 8.6 years old.",
-    "Someone of your mental age should be ashamed of their existance."
+    "Someone of your mental age should be ashamed of their existance.",
     "Even I am surprised by your complete ineptitude.",
     "Why don't you come back when you are capable of intelligent thought?",
     "Any insult of your intelligence would be an understatement.",
