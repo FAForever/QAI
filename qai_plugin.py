@@ -139,7 +139,7 @@ class Plugin(object):
         p = args.get('<person>')
         if p == self.bot.config['nick']:
             p = mask.nick
-        self._taunt(channel=target, prefix=p)
+        self._taunt(channel=target, prefix=p, tauntTable=TAUNTS)
 
     @command(permission='admin')
     @asyncio.coroutine
@@ -206,6 +206,14 @@ class Plugin(object):
         if channel is None:
             channel = target
         self.bot.part(channel)
+
+    @command
+    def gullible(self, mask, target, args):
+        """Display additional commands
+
+            %%gullible
+        """
+        self._taunt(channel=target, prefix=mask.nick, tauntTable=SPAM_PROTECT_TAUNTS)
 
     @command
     def link(self, mask, target, args):
