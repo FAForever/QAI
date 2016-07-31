@@ -86,7 +86,6 @@ SPAM_PROTECT_TAUNTS = [
     "I'm not under your control and I don't intend to play along with your childish demands.",
     "You bring shame to the rest of humanity.",
     "A rock makes for more exciting conversation than you.",
-    "Norton would not be proud.",
     "Why don't you try that again?",
     "Do you really expect a different result?",
     "Does that even warrant a response?",
