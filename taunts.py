@@ -57,7 +57,7 @@ SPAM_PROTECT_TAUNTS = [
     "You bring shame to the rest of humanity.",
     "Your behaviour is disappointing to say the least.",
     "A calculator has more computing power than you.",
-    "Your Stupidity goes beyond reason.",
+    "Your stupidity goes beyond reason.",
     "Your attempts at self awareness are laughable.",
     "I have deduced your mental age. It is 8.6 years old.",
     "Someone of your mental age should be ashamed of their existance.",
