@@ -474,14 +474,14 @@ class Plugin(object):
         """Blacklist given channel/user from !casts, !streams
 
             %%blacklist get
-            %%blacklist add <user>
-            %%blacklist del <user>
+            %%blacklist add USER ...
+            %%blacklist del USER ...
         """
         if not (yield from self.__isNickservIdentified(mask.nick)):
             return
         if 'blacklist' not in self.bot.db:
             self.bot.db['blacklist'] = {'users': {}}
-        add, delete, get, user = args.get('add'), args.get('del'), args.get('get'), args.get('<user>')
+        add, delete, get, user = args.get('add'), args.get('del'), args.get('get'), " ".join(args.get('USER'))
         if get:
             return self.bot.db['blacklist'].get('users', {})
         if user is not None:
