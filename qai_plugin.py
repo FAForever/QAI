@@ -41,6 +41,10 @@ def action(bot, *args):
 @irc3.plugin
 class Plugin(object):
 
+    requires = [
+        'irc3.plugins.userlist'
+    ]
+
     def __init__(self, bot):
         self.bot = bot
         self.timers = {}
@@ -65,6 +69,8 @@ class Plugin(object):
     @irc3.event(irc3.rfc.CONNECTED)
     def nickserv_auth(self, *args, **kwargs):
         self.bot.privmsg('nickserv', 'identify %s' % self.bot.config['nickserv_password'])
+        if 'groups' not in self.bot.db:
+            self.bot.db['groups'] = {'playergroups': {}}
         if 'badwords' in self.bot.db:
             if 'words' in self.bot.db['badwords']:
                 global BADWORDS
@@ -421,6 +427,23 @@ class Plugin(object):
             yield from asyncio.sleep(0.1)
         return False
 
+    def __isInChannel(self, player, channel):
+        for mode, nicknames in sorted(channel.modes.items()):
+            for nick in nicknames:
+                if nick == player:
+                    return True
+        return False
+
+    def __filterForPlayersInChannel(self, playerlist, channelname):
+        players = {}
+        if not channelname in self.bot.channels:
+            return players
+        channel = self.bot.channels[channelname]
+        for p in playerlist.keys():
+            if self.__isInChannel(p, channel):
+                players[p] = True
+        return players
+
     @command
     @asyncio.coroutine
     def streams(self, mask, target, args):
@@ -467,6 +490,118 @@ class Plugin(object):
                                         stream["viewers"]))
         else:
             self.bot.privmsg(target, "Nobody is streaming :'(")
+
+    @command
+    @asyncio.coroutine
+    def groupping(self, mask, target, args):
+        """Pings people in this group
+
+            %%groupping <groupname>
+        """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
+        groupname = args.get('<groupname>')
+        playergroups = self.bot.db['groups'].get('playergroups', {})
+        if not playergroups.get(groupname):
+            return
+        players, text = playergroups[groupname].get('players', {}), playergroups[groupname].get('text', "")
+        playerlist = self.__filterForPlayersInChannel(players, target)
+        if not players.get(mask.nick):
+            self._taunt(channel=target, prefix=mask.nick, tauntTable=TAUNTS)
+            return
+        if self.spam_protect('groupping_' + groupname, mask, target, args):
+            return
+        self.bot.privmsg(target, text + " " + mask.nick + " requests your presence!")
+        self.bot.privmsg(target, ", ".join(playerlist))
+
+    @command(public=False)
+    @asyncio.coroutine
+    def group(self, mask, target, args):
+        """Allows joining and leaving ping groups
+
+            %%group get
+            %%group join <groupname>
+            %%group leave <groupname>
+        """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
+        get, join, leave, groupname = args.get('get'), args.get('join'), args.get('leave'), args.get('<groupname>')
+        playergroups = self.bot.db['groups'].get('playergroups', {})
+        if get:
+            self.bot.privmsg(mask.nick, str(len(playergroups)) + " groups: ")
+            for g in playergroups.keys():
+                players = playergroups[g].get('players', {})
+                isMember = ""
+                if players.get(mask.nick):
+                    isMember = " You are member of this group."
+                self.bot.privmsg(mask.nick, 'Group {name} with {num} users.{ismember}'.format(**{
+                    "name": g,
+                    "num": len(players),
+                    "ismember" : isMember,
+                }))
+            return
+        if not playergroups.get(groupname):
+            return "Group does not exist."
+        players = playergroups[groupname].get('players', {})
+        if join:
+            players[mask.nick] = True
+        elif leave:
+            if not players.get(mask.nick):
+                return "You are not in this group."
+            del players[mask.nick]
+        self.bot.db.set('groups', playergroups=playergroups)
+        return "Done."
+
+    @command(permission='admin', public=False)
+    @asyncio.coroutine
+    def groupmanage(self, mask, target, args):
+        """Allows admins to manage groups
+
+            %%groupmanage get
+            %%groupmanage add <groupname> TEXT ...
+            %%groupmanage del <groupname>
+            %%groupmanage join <groupname> <playername>
+            %%groupmanage leave <groupname> <playername>
+        """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
+        get, add, delete, join, leave, groupname, playername, TEXT = args.get('get'), args.get('add'), args.get('del'), args.get('join'), args.get('leave'), args.get('<groupname>'), args.get('<playername>'), " ".join(args.get('TEXT'))
+        playergroups = self.bot.db['groups'].get('playergroups', {})
+        if get:
+            self.bot.privmsg(mask.nick, str(len(playergroups)) + " groups: ")
+            for g in playergroups.keys():
+                players = playergroups[g].get('players', {})
+                self.bot.privmsg(mask.nick, 'Group {name} with {num} users: {players}'.format(**{
+                    "name": g,
+                    "num": len(players), 
+                    "players": ", ".join(players), 
+                }))
+            return
+        
+        if add:
+            if groupname in playergroups.keys():
+                players = playergroups[groupname].get('players', {})
+                playergroups[groupname] = {'text' : TEXT, 'players' : players}
+                self.bot.db.set('groups', playergroups=playergroups)               
+                return "Group with that name already exists. The old message was replaced, player list stays."
+            playergroups[groupname] = {'text' : TEXT, 'players' : {}}
+            self.bot.db.set('groups', playergroups=playergroups)
+            return "Done."
+        
+        if not playergroups.get(groupname):
+            return "Group does not exist."
+        players = playergroups[groupname].get('players', {})
+        if delete:
+            del playergroups[groupname]
+        elif join:
+            players[playername] = True
+        elif leave:
+            if not players.get(playername):
+                return "The player is not in this group."
+            del players[playername]
+
+        self.bot.db.set('groups', playergroups=playergroups)
+        return "Done."
 
     @command(permission='admin', public=False)
     @asyncio.coroutine
