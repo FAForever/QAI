@@ -428,10 +428,8 @@ class Plugin(object):
         return False
 
     def __isInChannel(self, player, channel):
-        for mode, nicknames in sorted(channel.modes.items()):
-            for nick in nicknames:
-                if nick == player:
-                    return True
+        if player in channel:
+            return True
         return False
 
     def __filterForPlayersInChannel(self, playerlist, channelname):
