@@ -72,7 +72,12 @@ class Plugin(object):
         self.bot.privmsg('nickserv', 'identify %s' % self.bot.config['nickserv_password'])
         global REPETITIONS, BADWORDS, REACTIONWORDS
 
+        self.__dbAdd([], 'chatlists', {}, overwriteIfExists=False)
+        self.__dbAdd(['repetitions'], 'text', {}, overwriteIfExists=False)
+        self.__dbAdd(['blacklist'], 'users', {}, overwriteIfExists=False)
         self.__dbAdd(['groups'], 'playergroups', {}, overwriteIfExists=False)
+        self.__dbAdd(['badwords'], 'words', {}, overwriteIfExists=False)
+        self.__dbAdd(['reactionwords'], 'words', {}, overwriteIfExists=False)
         BADWORDS = self.__dbGet(['badwords', 'words'])
         REACTIONWORDS = self.__dbGet(['reactionwords', 'words'])
 
@@ -85,8 +90,8 @@ class Plugin(object):
     @irc3.event(irc3.rfc.JOIN)
     def on_join(self, channel, mask):
         if channel == '#aeolus':
-            for channel in self.bot.db['chatlists']:
-                if mask.nick in self.bot.db['chatlists'].get(channel, {}).keys():
+            for channel in self.__dbGet(['chatlists']):
+                if mask.nick in self.__dbGet(['chatlists', channel]).keys():
                     self.move_user(channel, mask.nick)
 
     def move_user(self, channel, nick):
@@ -125,14 +130,14 @@ class Plugin(object):
 
         if channel.startswith("#"):
             lowercaseMsg = msg.lower()
-            for badword in BADWORDS:
-                if badword in lowercaseMsg:
-                    self.report(sender.nick, badword, channel, msg, BADWORDS[badword])
             for reactionword in REACTIONWORDS:
                 if reactionword in lowercaseMsg:
                     self.bot.privmsg(channel, REACTIONWORDS[reactionword].format(**{
                         "sender" : sender.nick,
                     }))
+            for badword in BADWORDS:
+                if badword in lowercaseMsg:
+                    self.report(sender.nick, badword, channel, msg, BADWORDS[badword])
 
         if sender.startswith("NickServ!"):
             self.__handleNickservMessage(msg)
@@ -365,7 +370,7 @@ class Plugin(object):
         try:
             for item in itertools.takewhile(lambda _: len(casts) < 5, data['items']):
                 channel_title = item['snippet']['channelTitle']
-                if channel_title not in self.bot.db['blacklist'].get('users', {}) and channel_title != '':
+                if channel_title not in self.__dbGet(['blacklist', 'users']) and channel_title != '':
                     casts.append(item)
                     try:
                         self.bot.action(target,
@@ -458,7 +463,7 @@ class Plugin(object):
             return
         streams = yield from self.hitbox_streams()
         streams.extend((yield from self.twitch_streams()))
-        blacklist = self.bot.db['blacklist'].get('users', {})
+        blacklist = self.__dbGet(['blacklist', 'users'])
         for stream in streams:
             try:
                 if stream["media_display_name"] in blacklist:
@@ -504,7 +509,7 @@ class Plugin(object):
         if not (yield from self.__isNickservIdentified(mask.nick)):
             return
         groupname = args.get('<groupname>')
-        playergroups = self.bot.db['groups'].get('playergroups', {})
+        playergroups = self.__dbGet(['groups', 'playergroups'])
         if not playergroups.get(groupname):
             return
         players, text = playergroups[groupname].get('players', {}), playergroups[groupname].get('text', "")
@@ -529,7 +534,7 @@ class Plugin(object):
         if not (yield from self.__isNickservIdentified(mask.nick)):
             return
         get, join, leave, groupname = args.get('get'), args.get('join'), args.get('leave'), args.get('<groupname>')
-        playergroups = self.bot.db['groups'].get('playergroups', {})
+        playergroups = self.__dbGet(['groups', 'playergroups'])
         if get:
             self.bot.privmsg(mask.nick, str(len(playergroups)) + " groups: ")
             for g in playergroups.keys():
@@ -547,12 +552,11 @@ class Plugin(object):
             return "Group does not exist."
         players = playergroups[groupname].get('players', {})
         if join:
-            players[mask.nick] = True
+            self.__dbAdd(['groups', 'playergroups', groupname, 'players'], mask.nick, True)
         elif leave:
             if not players.get(mask.nick):
                 return "You are not in this group."
-            del players[mask.nick]
-        self.bot.db.set('groups', playergroups=playergroups)
+            self.__dbDel(['groups', 'playergroups', groupname, 'players'], mask.nick)
         return "Done."
 
     @command(permission='admin', public=False)
@@ -569,7 +573,7 @@ class Plugin(object):
         if not (yield from self.__isNickservIdentified(mask.nick)):
             return
         get, add, delete, join, leave, groupname, playername, TEXT = args.get('get'), args.get('add'), args.get('del'), args.get('join'), args.get('leave'), args.get('<groupname>'), args.get('<playername>'), " ".join(args.get('TEXT'))
-        playergroups = self.bot.db['groups'].get('playergroups', {})
+        playergroups = self.__dbGet(['groups', 'playergroups'])
         if get:
             self.bot.privmsg(mask.nick, str(len(playergroups)) + " groups: ")
             for g in playergroups.keys():
@@ -583,27 +587,22 @@ class Plugin(object):
         
         if add:
             if groupname in playergroups.keys():
-                players = playergroups[groupname].get('players', {})
-                playergroups[groupname] = {'text' : TEXT, 'players' : players}
-                self.bot.db.set('groups', playergroups=playergroups)               
+                self.__dbAdd(['groups', 'playergroups', groupname], 'text', TEXT, overwriteIfExists=True)
                 return "Group with that name already exists. The old message was replaced, player list stays."
-            playergroups[groupname] = {'text' : TEXT, 'players' : {}}
-            self.bot.db.set('groups', playergroups=playergroups)
+            self.__dbAdd(['groups', 'playergroups'], groupname, {'text' : TEXT, 'players' : {}})
             return "Done."
         
         if not playergroups.get(groupname):
             return "Group does not exist."
         players = playergroups[groupname].get('players', {})
         if delete:
-            del playergroups[groupname]
+            self.__dbDel(['groups', 'playergroups'], groupname)
         elif join:
-            players[playername] = True
+            self.__dbAdd(['groups', 'playergroups', groupname, 'players'], playername, True)
         elif leave:
             if not players.get(playername):
                 return "The player is not in this group."
-            del players[playername]
-
-        self.bot.db.set('groups', playergroups=playergroups)
+            self.__dbDel(['groups', 'playergroups', groupname, 'players'], playername)
         return "Done."
 
     @command(permission='admin', public=False)
@@ -617,20 +616,19 @@ class Plugin(object):
         """
         if not (yield from self.__isNickservIdentified(mask.nick)):
             return
-        if 'blacklist' not in self.bot.db:
-            self.bot.db['blacklist'] = {'users': {}}
         add, delete, get, user = args.get('add'), args.get('del'), args.get('get'), " ".join(args.get('USER'))
         if get:
-            return self.bot.db['blacklist'].get('users', {})
+            for user in self.__dbGet(['blacklist', 'users']).keys():
+                self.bot.privmsg(mask.nick, '- '+user)
+            return
         if user is not None:
-            users = self.bot.db['blacklist'].get('users', {})
+            users = self.__dbGet(['blacklist', 'users'])
             if add:
-                users[user] = True
-                self.bot.db.set('blacklist', users=users)
+                self.__dbAdd(['blacklist', 'users'], user, True)
                 return "Added {} to blacklist".format(user)
             if delete:
                 if users.get(user):
-                    del users[user]
+                    self.__dbDel(['blacklist', 'users'], user)
                     return "Removed {} from the blacklist".format(user)
                 return "{} is not on the blacklist.".format(user)
         return "Something went wrong."
@@ -647,14 +645,10 @@ class Plugin(object):
         if not (yield from self.__isNickservIdentified(mask.nick)):
             return
         global BADWORDS
-        if 'badwords' not in self.bot.db:
-            self.bot.db['badwords'] = {'words': {}}
         add, delete, get, word, gravity = args.get('add'), args.get('del'), args.get('get'), args.get('<word>'), args.get('<gravity>')
         if add:
             try:
-                words = self.bot.db['badwords'].get('words', {})
-                words[word] = int(gravity)
-                self.bot.db.set('badwords', words=words)
+                words = self.__dbAdd(['badwords', 'words'], word, int(gravity), True)
                 BADWORDS = words
                 return 'Added "{word}" to watched badwords with gravity {gravity}'.format(**{
                         "word": word,
@@ -663,17 +657,15 @@ class Plugin(object):
             except:
                 return "Failed adding the word. Did you not use a number for the gravity?"
         elif delete:
-            words = self.bot.db['badwords'].get('words', {})
-            if words.get(word):
-                del self.bot.db['badwords']['words'][word]
-                BADWORDS = self.bot.db['badwords'].get('words', {})
+            if BADWORDS.get(word):
+                BADWORDS = self.__dbDel(['badwords', 'words'], word)
                 return 'Removed "{word}" from watched badwords'.format(**{
                         "word": word,
                     })
             else:
                 return 'Word not found in the list.'
         elif get:
-            words = self.bot.db['badwords'].get('words', {})
+            words = BADWORDS
             self.bot.privmsg(mask.nick, str(len(words)) + " checked badwords:")
             for word in words.keys():
                 self.bot.privmsg(mask.nick, '- word: "%s", gravity: %s' % (word, words[word]))
@@ -691,8 +683,6 @@ class Plugin(object):
         if not (yield from self.__isNickservIdentified(mask.nick)):
             return
         global REACTIONWORDS
-        if 'reactionwords' not in self.bot.db:
-            self.bot.db['reactionwords'] = {'words': {}}
         add, delete, get, word, reply = args.get('add'), args.get('del'), args.get('get'), args.get('<word>'), " ".join(args.get('REPLY'))
         if add:
             try:
@@ -705,11 +695,9 @@ class Plugin(object):
             except:
                 return "Failed adding the word."
         elif delete:
-            words = self.bot.db['reactionwords'].get('words', {})
+            words = self.__dbGet(['reactionwords', 'words'])
             if words.get(word):
-                #del self.bot.db['reactionwords']['words'][word]
-                self.__dbDel(['reactionwords', 'words'], word)
-                REACTIONWORDS = self.bot.db['reactionwords'].get('words', {})
+                REACTIONWORDS = self.__dbDel(['reactionwords', 'words'], word)
                 return 'Removed "{word}" from watched reactionwords'.format(**{
                         "word": word,
                     })
@@ -733,25 +721,21 @@ class Plugin(object):
         if not (yield from self.__isNickservIdentified(mask.nick)):
             return
         global REPETITIONS
-        if 'repetitions' not in self.bot.db:
-            self.bot.db['repetitions'] = {'text': {}}
         add, delete, get, ID, seconds, channel, WORDS = args.get('add'), args.get('del'), args.get('get'), args.get('<ID>'), args.get('<seconds>'), args.get('<channel>'), " ".join(args.get('WORDS'))
+        text = self.__dbGet(['repetitions', 'text'])
         if get:
-            text = self.bot.db['repetitions'].get('text', {})
             self.bot.privmsg(mask.nick, str(len(text)) + " texts repeating:")
             for t in text.keys():
                 self.bot.privmsg(mask.nick, '  ID: "%s", each %i seconds, channel: %s, text: %s' % (t, text[t].get('seconds'), text[t].get('channel'), text[t].get('text')))
         elif add:
             try:
-                text = self.bot.db['repetitions'].get('text', {})
                 if text.get(ID):
                     return "ID already exists. Pick another."
-                text[ID] = {
+                self.__dbAdd(['repetitions', 'text'], ID, {
                     "seconds": int(seconds),
                     "text": WORDS,
                     "channel": channel,
-                }
-                self.bot.db.set('repetitions', text=text)
+                })
                 REPETITIONS[ID] = repetition.repetitionThread(self.bot, channel, WORDS, int(seconds))
                 REPETITIONS[ID].daemon = True
                 REPETITIONS[ID].start()
@@ -760,10 +744,8 @@ class Plugin(object):
                 return "Failed adding the text."
         elif delete:
             try:
-                text = self.bot.db['repetitions'].get('text', {})
                 if text.get(ID):
-                    del text[ID]
-                    self.bot.db.set('repetitions', text=text)
+                    self.__dbDel(['repetitions', 'text'], ID)
                     REPETITIONS[ID].stop()
                     del REPETITIONS[ID]
                     return 'Done.'
@@ -797,26 +779,21 @@ class Plugin(object):
         """
         if not (yield from self.__isNickservIdentified(mask.nick)):
             return
-        if 'chatlists' not in self.bot.db:
-            self.bot.db['chatlists'] = {}
         channel, user, add, remove = args.get('<channel>'), args.get('<user>'), args.get('add'), args.get('del')
         if not add and not remove:
             if not channel:
-                self.bot.privmsg(mask.nick, ", ".join(self.bot.db.get('chatlists')))
+                self.bot.privmsg(mask.nick, ", ".join(self.__dbGet(['chatlists'])))
             else:
-                self.bot.privmsg(mask.nick, ", ".join(self.bot.db['chatlists'].get(channel, {}).keys()))
+                self.bot.privmsg(mask.nick, ", ".join(self.__dbGet(['chatlists', channel]).keys()))
         elif add:
-            if channel not in self.bot.db['chatlists']:
-                self.bot.db['chatlists'][channel] = {}
-            self.bot.db['chatlists'][channel][user] = True
+            self.__dbAdd(['chatlists', channel], user, True)
             self.move_user(channel, user)
             self.bot.privmsg(mask.nick, "OK added and moved %s to %s" % (user, channel))
         elif remove:
-            if channel not in self.bot.db['chatlists']:
-                self.bot.db['chatlists'][channel] = {}
-            del self.bot.db['chatlists'][channel][user]
-            if len(self.bot.db['chatlists'][channel]) == 0:
-                del self.bot.db['chatlists'][channel]
+            remaining = self.__dbDel(['chatlists', channel], user)
+            if len(remaining) == 0:
+                print('should delete now')
+                self.__dbDel(['chatlists'], channel)
             self.bot.privmsg(mask.nick, "OK removed %s from %s" % (user, channel))
 
     @command
@@ -892,7 +869,7 @@ class Plugin(object):
         cur = self.bot.db
         for p in path:
             cur = cur.get(p, {})
-        if cur.get(key):
+        if not cur.get(key) is None:
             del cur[key]
         return cur
 
