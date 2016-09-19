@@ -21,6 +21,7 @@ from links import LINKS, LINKS_SYNONYMES, WIKI_LINKS, WIKI_LINKS_SYNONYMES, OTHE
 
 ALL_TAUNTS = [] # extended in init
 BADWORDS = {}
+REACTIONWORDS = {}
 REPETITIONS = {}
 NICKSERVIDENTIFIEDRESPONSES = {}
 NICKSERVIDENTIFIEDRESPONSESLOCK = None
@@ -69,19 +70,17 @@ class Plugin(object):
     @irc3.event(irc3.rfc.CONNECTED)
     def nickserv_auth(self, *args, **kwargs):
         self.bot.privmsg('nickserv', 'identify %s' % self.bot.config['nickserv_password'])
-        if 'groups' not in self.bot.db:
-            self.bot.db['groups'] = {'playergroups': {}}
-        if 'badwords' in self.bot.db:
-            if 'words' in self.bot.db['badwords']:
-                global BADWORDS
-                BADWORDS = self.bot.db['badwords'].get('words', {}) #doing this here to init BADWORDS after the bot got its db
-        if 'repetitions' in self.bot.db:
-            if 'text' in self.bot.db['repetitions']:
-                text = self.bot.db['repetitions'].get('text', {})
-                global REPETITIONS
-                for t in text.keys():
-                    REPETITIONS[t] = repetition.repetitionThread(self.bot, text[t].get('channel'), text[t].get('text'), int(text[t].get('seconds')))
-                    REPETITIONS[t].start()
+        global REPETITIONS, BADWORDS, REACTIONWORDS
+
+        self.__dbAdd(['groups'], 'playergroups', {}, overwriteIfExists=False)
+        BADWORDS = self.__dbGet(['badwords', 'words'])
+        REACTIONWORDS = self.__dbGet(['reactionwords', 'words'])
+
+        repetitions = self.__dbGet(['repetitions', 'text'])
+        for t in repetitions.keys():
+            REPETITIONS[t] = repetition.repetitionThread(self.bot, repetitions[t].get('channel'), repetitions[t].get('text'), int(repetitions[t].get('seconds')))
+            REPETITIONS[t].daemon = True
+            REPETITIONS[t].start()
 
     @irc3.event(irc3.rfc.JOIN)
     def on_join(self, channel, mask):
@@ -117,7 +116,8 @@ class Plugin(object):
         try:
             replayId = re.match(REPLAY_MATCH, msg).groups()[0]
             replayId = replayId.replace('#', '')
-            if int(replayId) >= 1000000:
+            rId = int(replayId)
+            if rId >= 1000000 and rId < 100000000:
                 url = LINKS["replay"].replace("ID", replayId)
                 self.bot.privmsg(channel, url)
         except:
@@ -128,6 +128,11 @@ class Plugin(object):
             for badword in BADWORDS:
                 if badword in lowercaseMsg:
                     self.report(sender.nick, badword, channel, msg, BADWORDS[badword])
+            for reactionword in REACTIONWORDS:
+                if reactionword in lowercaseMsg:
+                    self.bot.privmsg(channel, REACTIONWORDS[reactionword].format(**{
+                        "sender" : sender.nick,
+                    }))
 
         if sender.startswith("NickServ!"):
             self.__handleNickservMessage(msg)
@@ -671,7 +676,50 @@ class Plugin(object):
             words = self.bot.db['badwords'].get('words', {})
             self.bot.privmsg(mask.nick, str(len(words)) + " checked badwords:")
             for word in words.keys():
-                self.bot.privmsg(mask.nick, '  word: "%s", gravity: %s' % (word, words[word]))
+                self.bot.privmsg(mask.nick, '- word: "%s", gravity: %s' % (word, words[word]))
+
+    @command(permission='admin', public=False)
+    @asyncio.coroutine
+    def reactionwords(self, mask, target, args):
+        """Adds/removes a given keyword from the checklist.
+        "{sender}" in the reply text will be replaced by the name of the person who triggered the response.
+
+            %%reactionwords get
+            %%reactionwords add <word> REPLY ...
+            %%reactionwords del <word>
+        """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
+        global REACTIONWORDS
+        if 'reactionwords' not in self.bot.db:
+            self.bot.db['reactionwords'] = {'words': {}}
+        add, delete, get, word, reply = args.get('add'), args.get('del'), args.get('get'), args.get('<word>'), " ".join(args.get('REPLY'))
+        if add:
+            try:
+                words = self.__dbAdd(['reactionwords', 'words'], word, reply)
+                REACTIONWORDS = words
+                return 'Added "{word}" to watched reactionwords with reply: "{reply}"'.format(**{
+                        "word": word,
+                        "reply": reply,
+                    })
+            except:
+                return "Failed adding the word."
+        elif delete:
+            words = self.bot.db['reactionwords'].get('words', {})
+            if words.get(word):
+                #del self.bot.db['reactionwords']['words'][word]
+                self.__dbDel(['reactionwords', 'words'], word)
+                REACTIONWORDS = self.bot.db['reactionwords'].get('words', {})
+                return 'Removed "{word}" from watched reactionwords'.format(**{
+                        "word": word,
+                    })
+            else:
+                return 'Word not found in the list.'
+        elif get:
+            words = self.__dbGet(['reactionwords', 'words'])
+            self.bot.privmsg(mask.nick, str(len(words)) + " checked reactionwords:")
+            for word in words.keys():
+                self.bot.privmsg(mask.nick, '- word: "%s", reply: %s' % (word, words[word]))
 
     @command(permission='admin', public=False)
     @asyncio.coroutine
@@ -827,3 +875,29 @@ class Plugin(object):
         if gravity >= self.bot.config['report_instant_kick_threshold']:
             self._taunt(channel=channel, prefix=name, tauntTable=KICK_TAUNTS)
             self.bot.privmsg(channel, "!kick {}".format(name))
+
+    def __dbAdd(self, path, key, value, overwriteIfExists=True):
+        cur = self.bot.db
+        for p in path:
+            if p not in cur:
+                cur[p] = {}
+            cur = cur[p]
+        if overwriteIfExists:
+            cur[key] = value
+        elif not cur.get(key):
+            cur[key] = value
+        return cur
+
+    def __dbDel(self, path, key):
+        cur = self.bot.db
+        for p in path:
+            cur = cur.get(p, {})
+        if cur.get(key):
+            del cur[key]
+        return cur
+
+    def __dbGet(self, path):
+        reply = self.bot.db
+        for p in path:
+            reply = reply.get(p, {})
+        return reply
