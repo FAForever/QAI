@@ -863,6 +863,7 @@ class Plugin(object):
             cur[key] = value
         elif not cur.get(key):
             cur[key] = value
+        self.__dbSave()
         return cur
 
     def __dbDel(self, path, key):
@@ -871,6 +872,7 @@ class Plugin(object):
             cur = cur.get(p, {})
         if not cur.get(key) is None:
             del cur[key]
+            self.__dbSave()
         return cur
 
     def __dbGet(self, path):
@@ -878,3 +880,6 @@ class Plugin(object):
         for p in path:
             reply = reply.get(p, {})
         return reply
+
+    def __dbSave(self):
+        self.bot.db.set('misc', lastSaved=time.time())
