@@ -23,8 +23,10 @@ ALL_TAUNTS = [] # extended in init
 BADWORDS = {}
 REACTIONWORDS = {}
 REPETITIONS = {}
+OFFLINEMESSAGE_RECEIVERS = {}
 NICKSERVIDENTIFIEDRESPONSES = {}
 NICKSERVIDENTIFIEDRESPONSESLOCK = None
+MAIN_CHANNEL = "#aeolus"
 TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+Forged+Alliance" #add the game name at the end of the link (space = "+", eg: Game+Name)
 HITBOX_STREAMS = "https://api.hitbox.tv/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
 YOUTUBE_NON_API_SEARCH_LINK = "https://www.youtube.com/results?search_query=supreme+commander+%7C+forged+alliance&search_sort=video_date_uploaded&filters=video"
@@ -73,6 +75,7 @@ class Plugin(object):
         global REPETITIONS, BADWORDS, REACTIONWORDS
 
         self.__dbAdd([], 'chatlists', {}, overwriteIfExists=False)
+        self.__dbAdd([], 'offlinemessages', {}, overwriteIfExists=False)
         self.__dbAdd(['repetitions'], 'text', {}, overwriteIfExists=False)
         self.__dbAdd(['blacklist'], 'users', {}, overwriteIfExists=False)
         self.__dbAdd(['groups'], 'playergroups', {}, overwriteIfExists=False)
@@ -80,6 +83,10 @@ class Plugin(object):
         self.__dbAdd(['reactionwords'], 'words', {}, overwriteIfExists=False)
         BADWORDS = self.__dbGet(['badwords', 'words'])
         REACTIONWORDS = self.__dbGet(['reactionwords', 'words'])
+
+        for r in self.__dbGet(['offlinemessages']).keys():
+            OFFLINEMESSAGE_RECEIVERS[r] = True
+            self._tryDeliverOfflineMessages(r)
 
         repetitions = self.__dbGet(['repetitions', 'text'])
         for t in repetitions.keys():
@@ -89,10 +96,12 @@ class Plugin(object):
 
     @irc3.event(irc3.rfc.JOIN)
     def on_join(self, channel, mask):
-        if channel == '#aeolus':
+        if channel == MAIN_CHANNEL:
             for channel in self.__dbGet(['chatlists']):
                 if mask.nick in self.__dbGet(['chatlists', channel]).keys():
                     self.move_user(channel, mask.nick)
+        if OFFLINEMESSAGE_RECEIVERS.get(mask.nick, False):
+            self._tryDeliverOfflineMessages(mask.nick)
 
     def move_user(self, channel, nick):
         self.bot.privmsg('OperServ', 'svsjoin %s %s' % (nick, channel))
@@ -287,6 +296,26 @@ class Plugin(object):
                 msg += " ?"
             self.bot.privmsg(target, msg)
 
+    @command(public=False)
+    @asyncio.coroutine
+    def offlinemessage(self, mask, target, args):
+        """Store an offline message, it is delivered once the person logs on
+
+            %%offlinemessage <playername> WORDS ...
+        """
+        if not (yield from self.__isNickservIdentified(mask.nick)):
+            return
+        playername, message = args.get('<playername>'), " ".join(args.get('WORDS'))
+        if mask.nick == playername:
+            self._taunt(mask.nick)
+            return
+        isOnline, channel = self.__isInBotChannel(playername)
+        if isOnline:
+            return "The player is online in " + channel + ", tell him yourself."
+        self.__dbAdd(['offlinemessages', playername], mask.nick, {'message':message, 'sender':mask.nick, 'time':str(time.strftime("%d.%m.%Y %H:%M:%S"))}, overwriteIfExists=False, trySavingWithNewKey=True)
+        OFFLINEMESSAGE_RECEIVERS[playername] = True
+        self.bot.privmsg(mask.nick, "The message is saved and will be delivered once " + playername + " is online again.")
+
     @command(permission='admin', public=False)
     @asyncio.coroutine
     def puppet(self, mask, target, args):
@@ -332,6 +361,19 @@ class Plugin(object):
         else:
             prefix = '%s: ' % prefix
         self.bot.privmsg(channel, "%s%s" % (prefix, random.choice(tauntTable)))
+
+    def _tryDeliverOfflineMessages(self, receiver):
+        if OFFLINEMESSAGE_RECEIVERS.get(receiver, False):
+            if self.__isNickservIdentified(receiver):
+                messages = self.__dbGet(['offlinemessages', receiver]).values()
+                for m in messages:
+                    self.bot.privmsg(receiver, '"{message}" - Sent by {sender}, {time}'.format(**{
+                        'message':m.get('message', "<message>"),
+                        'sender':m.get('sender', "<sender>"),
+                        'time':m.get('time', "<time>"),
+                    }))
+                del OFFLINEMESSAGE_RECEIVERS[receiver]
+                self.__dbDel(['offlinemessages'], receiver)
 
     @asyncio.coroutine
     def hitbox_streams(self):
@@ -436,6 +478,12 @@ class Plugin(object):
             remainingTries -= 1
             yield from asyncio.sleep(0.1)
         return False
+
+    def __isInBotChannel(self, player):
+        for channel in self.bot.channels:
+            if self.__isInChannel(player, self.bot.channels[channel]):
+                return True, channel
+        return False, ""
 
     def __isInChannel(self, player, channel):
         if player in channel:
@@ -792,7 +840,6 @@ class Plugin(object):
         elif remove:
             remaining = self.__dbDel(['chatlists', channel], user)
             if len(remaining) == 0:
-                print('should delete now')
                 self.__dbDel(['chatlists'], channel)
             self.bot.privmsg(mask.nick, "OK removed %s from %s" % (user, channel))
 
@@ -853,18 +900,25 @@ class Plugin(object):
             self._taunt(channel=channel, prefix=name, tauntTable=KICK_TAUNTS)
             self.bot.privmsg(channel, "!kick {}".format(name))
 
-    def __dbAdd(self, path, key, value, overwriteIfExists=True):
+    def __dbAdd(self, path, key, value, overwriteIfExists=True, trySavingWithNewKey=False):
         cur = self.bot.db
         for p in path:
             if p not in cur:
                 cur[p] = {}
             cur = cur[p]
+        exists, addedWithNewKey = cur.get(key), False
         if overwriteIfExists:
             cur[key] = value
-        elif not cur.get(key):
+        elif not exists:
             cur[key] = value
+        elif exists and trySavingWithNewKey:
+            for i in range(0, 1000):
+                if not cur.get(key+str(i)):
+                    cur[key+str(i)] = value
+                    addedWithNewKey = True
+                    break
         self.__dbSave()
-        return cur
+        return cur, exists, addedWithNewKey
 
     def __dbDel(self, path, key):
         cur = self.bot.db
