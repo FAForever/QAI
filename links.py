@@ -61,6 +61,7 @@ WIKI_LINKS = {
     "trainers":          "List of personal trainers in FAF: http://wiki.faforever.com/index.php?title=User_Groups#Trainers",
     "trueskill":         "Trueskill explained: http://wiki.faforever.com/index.php?title=How_Trueskill_works",
     "tutorials":         "Help with learning how to play: http://wiki.faforever.com/index.php?title=Learning_SupCom",
+    "adaptivemap"        "Learn more about the adaptive maps from the Ultimate series http://wiki.faforever.com/index.php?title=Adaptive_Maps",
 }
 WIKI_LINKS_SYNONYMES = {
     "dev":              WIKI_LINKS["school"],
