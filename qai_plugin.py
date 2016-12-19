@@ -151,6 +151,18 @@ class Plugin(object):
         if sender.startswith("NickServ!"):
             self.__handleNickservMessage(msg)
 
+    @command(permission='admin', public=False)
+    @asyncio.coroutine
+    def hidden(self, mask, target, args):
+        """Actually shows hidden commands
+
+            %%hidden
+        """
+        words = ["join", "leave", "puppet", "reload", "groupmanage", "blacklist", "badwords", "reactionwords", "repeat", "move", "chatlist"]
+        self.bot.privmsg(mask.nick, "Hidden commands (!help <command> for more info):")
+        for word in words:
+            self.bot.privmsg(mask.nick, "- " + word)
+
     @command(permission='admin')
     @asyncio.coroutine
     def taunt(self, mask, target, args):
@@ -206,7 +218,7 @@ class Plugin(object):
             return
         self.bot.privmsg(target, "(╯°□°）╯︵ ┻━┻")
 
-    @command(permission='admin')
+    @command(permission='admin', show_in_help_list=False)
     @asyncio.coroutine
     def join(self, mask, target, args):
         """Overtake the given channel
@@ -217,7 +229,7 @@ class Plugin(object):
             return
         self.bot.join(args['<channel>'])
 
-    @command(permission='admin')
+    @command(permission='admin', show_in_help_list=False)
     @asyncio.coroutine
     def leave(self, mask, target, args):
         """Leave the given channel
@@ -316,7 +328,7 @@ class Plugin(object):
         OFFLINEMESSAGE_RECEIVERS[playername] = True
         self.bot.privmsg(mask.nick, "The message is saved and will be delivered once " + playername + " is online again.")
 
-    @command(permission='admin', public=False)
+    @command(permission='admin', public=False, show_in_help_list=False)
     @asyncio.coroutine
     def puppet(self, mask, target, args):
         """Puppet
@@ -329,7 +341,7 @@ class Plugin(object):
         m = " ".join(args.get('WORDS'))
         self.bot.privmsg(t, m)
 
-    @command(permission='admin', public=False)
+    @command(permission='admin', public=False, show_in_help_list=False)
     @asyncio.coroutine
     def reload(self, mask, target, args):
         """Reboot the mainframe
@@ -607,7 +619,7 @@ class Plugin(object):
             self.__dbDel(['groups', 'playergroups', groupname, 'players'], mask.nick)
         return "Done."
 
-    @command(permission='admin', public=False)
+    @command(permission='admin', public=False, show_in_help_list=False)
     @asyncio.coroutine
     def groupmanage(self, mask, target, args):
         """Allows admins to manage groups
@@ -653,7 +665,7 @@ class Plugin(object):
             self.__dbDel(['groups', 'playergroups', groupname, 'players'], playername)
         return "Done."
 
-    @command(permission='admin', public=False)
+    @command(permission='admin', public=False, show_in_help_list=False)
     @asyncio.coroutine
     def blacklist(self, mask, target, args):
         """Blacklist given channel/user from !casts, !streams
@@ -681,7 +693,7 @@ class Plugin(object):
                 return "{} is not on the blacklist.".format(user)
         return "Something went wrong."
 
-    @command(permission='admin', public=False)
+    @command(permission='admin', public=False, show_in_help_list=False)
     @asyncio.coroutine
     def badwords(self, mask, target, args):
         """Adds/removes a given keyword from the checklist 
@@ -718,7 +730,7 @@ class Plugin(object):
             for word in words.keys():
                 self.bot.privmsg(mask.nick, '- word: "%s", gravity: %s' % (word, words[word]))
 
-    @command(permission='admin', public=False)
+    @command(permission='admin', public=False, show_in_help_list=False)
     @asyncio.coroutine
     def reactionwords(self, mask, target, args):
         """Adds/removes a given keyword from the checklist.
@@ -756,7 +768,7 @@ class Plugin(object):
             for word in words.keys():
                 self.bot.privmsg(mask.nick, '- word: "%s", reply: %s' % (word, words[word]))
 
-    @command(permission='admin', public=False)
+    @command(permission='admin', public=False, show_in_help_list=False)
     @asyncio.coroutine
     def repeat(self, mask, target, args):
         """Makes QAI repeat WORDS in <channel> each <seconds>. Use <ID> to remove them again.
@@ -801,7 +813,7 @@ class Plugin(object):
             except:
                 return "Failed deleting."
 
-    @command(permission='chatlist')
+    @command(permission='chatlist', show_in_help_list=False)
     @asyncio.coroutine
     def move(self, mask, target, args):
         """Move nick into channel
@@ -814,7 +826,7 @@ class Plugin(object):
         self.move_user(channel, nick)
         self.bot.privmsg(mask.nick, "OK moved %s to %s" % (nick, channel))
 
-    @command(permission='chatlist')
+    @command(permission='chatlist', show_in_help_list=False)
     @asyncio.coroutine
     def chatlist(self, mask, target, args):
         """Chat lists
