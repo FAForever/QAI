@@ -72,7 +72,7 @@ class Plugin(object):
     @irc3.event(irc3.rfc.CONNECTED)
     def nickserv_auth(self, *args, **kwargs):
         self.bot.privmsg('nickserv', 'identify %s' % self.bot.config['nickserv_password'])
-        global REPETITIONS, BADWORDS, REACTIONWORDS
+        global REPETITIONS, BADWORDS, REACTIONWORDS, OFFLINEMESSAGE_RECEIVERS
 
         self.__dbAdd([], 'chatlists', {}, overwriteIfExists=False)
         self.__dbAdd([], 'offlinemessages', {}, overwriteIfExists=False)
@@ -376,16 +376,18 @@ class Plugin(object):
 
     def _tryDeliverOfflineMessages(self, receiver):
         if OFFLINEMESSAGE_RECEIVERS.get(receiver, False):
-            if self.__isNickservIdentified(receiver):
-                messages = self.__dbGet(['offlinemessages', receiver]).values()
-                for m in messages:
-                    self.bot.privmsg(receiver, '"{message}" - Sent by {sender}, {time}'.format(**{
-                        'message':m.get('message', "<message>"),
-                        'sender':m.get('sender', "<sender>"),
-                        'time':m.get('time', "<time>"),
-                    }))
-                del OFFLINEMESSAGE_RECEIVERS[receiver]
-                self.__dbDel(['offlinemessages'], receiver)
+            isOnline, _ = self.__isInBotChannel(receiver)
+            if isOnline:
+                if self.__isNickservIdentified(receiver):
+                    messages = self.__dbGet(['offlinemessages', receiver]).values()
+                    for m in messages:
+                        self.bot.privmsg(receiver, '"{message}" - Sent by {sender}, {time}'.format(**{
+                            'message':m.get('message', "<message>"),
+                            'sender':m.get('sender', "<sender>"),
+                            'time':m.get('time', "<time>"),
+                        }))
+                    del OFFLINEMESSAGE_RECEIVERS[receiver]
+                    self.__dbDel(['offlinemessages'], receiver)
 
     @asyncio.coroutine
     def hitbox_streams(self):
