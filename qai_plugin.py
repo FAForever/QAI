@@ -696,7 +696,8 @@ class Plugin(object):
         add, delete, get, word, gravity = args.get('add'), args.get('del'), args.get('get'), args.get('<word>'), args.get('<gravity>')
         if add:
             try:
-                BADWORDS; _, _ = self.__dbAdd(['badwords', 'words'], word, int(gravity), True)
+                word = word.lower()
+                BADWORDS, _, _ = self.__dbAdd(['badwords', 'words'], word, int(gravity), True)
                 return 'Added "{word}" to watched badwords with gravity {gravity}'.format(**{
                         "word": word,
                         "gravity": gravity, 
@@ -733,7 +734,7 @@ class Plugin(object):
         add, delete, get, word, reply = args.get('add'), args.get('del'), args.get('get'), args.get('<word>'), " ".join(args.get('REPLY'))
         if add:
             try:
-                REACTIONWORDS, _, _ = self.__dbAdd(['reactionwords', 'words'], word, reply)
+                REACTIONWORDS, _, _ = self.__dbAdd(['reactionwords', 'words'], word.lower(), reply)
                 return 'Added "{word}" to watched reactionwords with reply: "{reply}"'.format(**{
                         "word": word,
                         "reply": reply,
