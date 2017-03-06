@@ -8,7 +8,7 @@ LINKS = {
 
     "replay":       "Replay link: content.faforever.com/faf/vault/replay_vault/replay.php?id=ID",
     "unitsdb":      "Check out www.faforever.com/faf/unitsDB/ and spooky.github.io/unitdb/#/",
-    "namechange":   "Change username: http://app.faforever.com/faf/userName.php",
+    "namechange":   "Change username: https://www.faforever.com/account/username/change",
     "clans":        "FAF clans! clans.faforever.com",
 
     "github":       "FAF on Github: https://github.com/FAForever",
