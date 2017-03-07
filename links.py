@@ -14,7 +14,7 @@ LINKS = {
     "github":       "FAF on Github: https://github.com/FAForever",
     "youtube":      "FAF Youtube: https://www.youtube.com/channel/UCkAWiUu4QE172kv-ZuyR42w",
 
-    "replayparser": "Replay parser: http://fafafaf.bitbucket.org/",
+    "replayparser": "Replay parser: https://fafafaf.bitbucket.io/",
     "tumblr":       "FAF Reactions on tumblr: http://fafreactions.tumblr.com/",
 
     "wwpc":         "World Wide People's Championship: http://forums.faforever.com/viewtopic.php?f=26&t=10627",
