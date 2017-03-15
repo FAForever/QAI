@@ -1,14 +1,14 @@
 LINKS = {
     "faf":          "FAF main page! http://www.faforever.com",
-    "forum":        "FAF Forum! http://forums.faforever.com/index.php",
+    "forum":        "FAF Forum! http://forums.faforever.com",
     "support":      "Tech support! http://forums.faforever.com/viewforum.php?f=3",
     "wiki":         "FAF Wiki! http://wiki.faforever.com/index.php?title=Main_Page",
     "news":         "What's new? http://www.faforever.com/news/",
     "dev":          "Tumblr Development Feed http://faforeverdevblog.tumblr.com/",
 
-    "replay":       "Replay link: content.faforever.com/faf/vault/replay_vault/replay.php?id=ID",
-    "unitsdb":      "Check out www.faforever.com/faf/unitsDB/ and spooky.github.io/unitdb/#/",
-    "namechange":   "Change username: https://www.faforever.com/account/username/change",
+    "replay":       "Replay link: http://replay.faforever.com/ID",
+    "unitsdb":      "Check out http://direct.faforever.com/faf/unitsDB/ and spooky.github.io/unitdb/#/",
+    "namechange":   "Change username: https://faforever.com/account/username/change",
     "clans":        "FAF clans! clans.faforever.com",
 
     "github":       "FAF on Github: https://github.com/FAForever",
@@ -17,8 +17,7 @@ LINKS = {
     "replayparser": "Replay parser: https://fafafaf.bitbucket.io/",
     "tumblr":       "FAF Reactions on tumblr: http://fafreactions.tumblr.com/",
 
-    "wwpc":         "World Wide People's Championship: http://forums.faforever.com/viewtopic.php?f=26&t=10627",
-    "2v2wwpc":      "2v2 World Wide People's Championship: http://forums.faforever.com/viewtopic.php?f=26&t=9059",
+    "wwpc":         "World Wide People's Championship: http://forums.faforever.com/viewtopic.php?f=26&t=13780",
 }
 LINKS_SYNONYMES = {
     "techsupport":  LINKS["support"],
@@ -43,7 +42,7 @@ WIKI_LINKS = {
     "hostgame":          "How to host and join games: http://wiki.faforever.com/index.php?title=Host_and_join_games",
     "hotbuild":          "Setting up and using HotBuild: http://wiki.faforever.com/index.php?title=Game_Modifications_(Mods)#Gaz_UI_and_Hotbuild",
     "ladder":            "Info on the FAF 1v1 ladder: http://wiki.faforever.com/index.php?title=The_Ladder",
-    "ladderpool":        "The Current Ladder map pool: http://wiki.faforever.com/index.php?title=The_Ladder#Map_Pool",
+    "ladderpool":        "The Current Ladder map pool: http://wiki.faforever.com/index.php?title=Ladder_Map_Pool",
     "leaderboards":      "The 1v1 Ladder Leaderboards: http://wiki.faforever.com/index.php?title=Leaderboards_and_Rating",
     "mapeditor":         "Getting and using the map editor: http://wiki.faforever.com/index.php?title=Map_Editor",
     "irc":               "Connecting to and using FAF chat with IRC: http://wiki.faforever.com/index.php?title=Chat_/_IRC_server",
