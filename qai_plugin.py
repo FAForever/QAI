@@ -5,7 +5,6 @@ import random
 import asyncio
 import re
 import aiohttp
-import aiomysql
 import itertools
 import irc3
 from irc3.plugins.command import command
@@ -27,6 +26,7 @@ OFFLINEMESSAGE_RECEIVERS = {}
 NICKSERVIDENTIFIEDRESPONSES = {}
 NICKSERVIDENTIFIEDRESPONSESLOCK = None
 MAIN_CHANNEL = "#aeolus"
+TWITCH_API_LOGIN = "https://api.twitch.tv/kraken/users/"
 TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+Forged+Alliance" #add the game name at the end of the link (space = "+", eg: Game+Name)
 HITBOX_STREAMS = "https://api.hitbox.tv/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
 YOUTUBE_NON_API_SEARCH_LINK = "https://www.youtube.com/results?search_query=supreme+commander+%7C+forged+alliance&search_sort=video_date_uploaded&filters=video"
@@ -404,7 +404,7 @@ class Plugin(object):
 
     @asyncio.coroutine
     def twitch_streams(self):
-        req = yield from aiohttp.request('GET', TWITCH_STREAMS)
+        req = yield from aiohttp.request('GET', TWITCH_STREAMS, headers={'Client-ID': self.bot.config['twitch_client_id']})
         data = yield from req.read()
         try:
             return json.loads(data.decode())['streams']

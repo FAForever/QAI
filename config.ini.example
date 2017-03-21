@@ -1,5 +1,6 @@
 [bot]
 nick = QAI
+username = QAI
 realname = QAI
 
 host = irc.faforever.com
@@ -20,6 +21,8 @@ detectlanguage_api_key = ""
 
 youtube_key = ""
 youtube_time_fmt = ""
+
+twitch_client_id = howAboutNo
 
 challonge_username = faftd
 challonge_api_key = howAboutNo
