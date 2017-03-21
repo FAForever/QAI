@@ -31,6 +31,9 @@ class slackThread(threading.Thread):
         if works:
             print('Established Slack connection')
             self.ready = True
+        else:
+            print('Slack connection not established')
+            return
 
         countForPing = 0
         while True:
@@ -49,7 +52,11 @@ class slackThread(threading.Thread):
 
     def rebuildData(self):
         self.lock.acquire()
-        test = json.loads((self.SC.api_call("api.test")).decode())
+        test = False
+        try:
+            test = json.loads((self.SC.api_call("api.test")).decode())
+        except:
+            return False
         if test.get('ok') == False:
             print('API Test failed. Full response:')
             print(test)
