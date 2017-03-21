@@ -26,7 +26,6 @@ LINKS_SYNONYMES = {
 }
 
 LINKS_SYNONYMES["parser"] = LINKS_SYNONYMES["replays"] = LINKS_SYNONYMES["parsereplay"] = LINKS["replayparser"]
-LINKS_SYNONYMES["wwpc2v2"] = LINKS_SYNONYMES["wwpc2x2"] = LINKS_SYNONYMES["2x2wwpc"] = LINKS["2v2wwpc"]
 LINKS_SYNONYMES["blog"] = LINKS_SYNONYMES["development"] = LINKS_SYNONYMES["devblog"] = LINKS["dev"]
 
 WIKI_LINKS = {
