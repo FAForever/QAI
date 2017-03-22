@@ -32,6 +32,7 @@ HITBOX_STREAMS = "https://api.hitbox.tv/media/live/list?filter=popular&game=811&
 YOUTUBE_NON_API_SEARCH_LINK = "https://www.youtube.com/results?search_query=supreme+commander+%7C+forged+alliance&search_sort=video_date_uploaded&filters=video"
 YOUTUBE_SEARCH = "https://www.googleapis.com/youtube/v3/search?order=date&type=video&part=snippet&q=Forged%2BAlliance|Supreme%2BCommander&relevanceLanguage=en&maxResults=15&key={}"
 YOUTUBE_DETAIL = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id={}&key={}"
+YOUTUBE_STREAMS = "https://content.googleapis.com/youtube/v3/search?eventType=live&maxResults=5&order=viewCount&part=snippet&q=Forged%2BAlliance|Supreme%2BCommander&relevanceLanguage=en&type=video&key={}"
 LETMEGOOGLE = "http://lmgtfy.com/?q="
 URL_MATCH = ".*(https?:\/\/[^ ]+\.[^ ]*).*"
 REPLAY_MATCH = ".*(#[0-9]+).*"
@@ -395,9 +396,20 @@ class Plugin(object):
         data = yield from req.read()
         try:
             data = json.loads(data.decode())
-            livestreams = data.get('livestreams', None)
-            if not livestreams:
-                livestreams = data['livestream']
+            hitboxstreams = data.get('livestreams', None)
+            if not hitboxstreams:
+                hitboxstreams = data['livestream']
+            livestreams = []
+            for stream in hitboxstreams:
+                livestreams.append({
+                    'channel' : stream["media_display_name"],
+                    'text' : "%s - %s - %s Since %s (%s viewers) "
+                                    % (stream["media_display_name"],
+                                       stream["media_status"],
+                                       stream["channel"]["channel_link"],
+                                       stream["media_live_since"],
+                                       stream["media_views"])
+                })
             return livestreams
         except (KeyError, ValueError):
             return []
@@ -407,7 +419,44 @@ class Plugin(object):
         req = yield from aiohttp.request('GET', TWITCH_STREAMS, headers={'Client-ID': self.bot.config['twitch_client_id']})
         data = yield from req.read()
         try:
-            return json.loads(data.decode())['streams']
+            livestreams = []
+            for stream in json.loads(data.decode())['streams']:
+                t = stream["channel"].get("updated_at", "T0")
+                date = t.split("T")
+                hour = date[1].replace("Z", "")
+                livestreams.append({
+                    'channel' : stream["channel"]["display_name"],
+                    'text' : "%s - %s - %s since %s (%i viewers) "
+                                     % (stream["channel"]["display_name"],
+                                        stream["channel"]["status"],
+                                        stream["channel"]["url"],
+                                        hour,
+                                        stream["viewers"])
+                })
+            return livestreams
+        except (KeyError, ValueError):
+            return []
+
+    @asyncio.coroutine
+    def youtube_streams(self):
+        req = yield from aiohttp.request('GET', YOUTUBE_STREAMS.format(self.bot.config['youtube_key']))
+        data = yield from req.read()
+        try:
+            livestreams = []
+            for stream in json.loads(data.decode())['items']:
+                t = stream["snippet"].get("publishedAt", "T0")
+                date = t.split("T")
+                hour = date[1].replace("Z", "")
+                hour = (hour.split("."))[0]
+                livestreams.append({
+                    'channel' : stream["snippet"]["channelTitle"],
+                    'text' : "%s - %s - %s since %s "
+                                     % (stream["snippet"]["channelTitle"],
+                                        stream["snippet"]["title"],
+                                        "https://gaming.youtube.com/watch?v=" + stream["id"]["videoId"],
+                                        hour)
+                })
+            return livestreams
         except (KeyError, ValueError):
             return []
 
@@ -422,6 +471,7 @@ class Plugin(object):
             return
         req = yield from aiohttp.request('GET', YOUTUBE_SEARCH.format(self.bot.config['youtube_key']))
         data = json.loads((yield from req.read()).decode())
+
         casts = []
         try:
             for item in itertools.takewhile(lambda _: len(casts) < 5, data['items']):
@@ -525,39 +575,16 @@ class Plugin(object):
             return
         streams = yield from self.hitbox_streams()
         streams.extend((yield from self.twitch_streams()))
+        streams.extend((yield from self.youtube_streams()))
         blacklist = self.__dbGet(['blacklist', 'users'])
         for stream in streams:
-            try:
-                if stream["media_display_name"] in blacklist:
-                    streams.remove(stream)
-            except:
-                if stream["channel"]["display_name"] in blacklist:
-                    streams.remove(stream)
+            if stream["channel"] in blacklist:
+                streams.remove(stream)
 
         if len(streams) > 0:
             self.bot.privmsg(target, "%i streams online:" % len(streams))
             for stream in streams:
-                t = stream["channel"].get("updated_at", "T0")
-                date = t.split("T")
-                hour = date[1].replace("Z", "")
-
-                try: 
-                    self.bot.action(target,
-                                     "%s - %s - %s Since %s (%s viewers) "
-                                     % (stream["media_display_name"],
-                                        stream["media_status"],
-                                        stream["channel"]["channel_link"],
-                                        stream["media_live_since"],
-                                        stream["media_views"]))
-
-                except KeyError:
-                    self.bot.action(target,
-                                     "%s - %s - %s since %s (%i viewers) "
-                                     % (stream["channel"]["display_name"],
-                                        stream["channel"]["status"],
-                                        stream["channel"]["url"],
-                                        hour,
-                                        stream["viewers"]))
+                self.bot.action(target, stream['text'])
         else:
             self.bot.privmsg(target, "Nobody is streaming :'(")
 
