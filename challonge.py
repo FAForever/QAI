@@ -53,7 +53,7 @@ def getTourneyByLink(link):
     tourney = yield from aiohttp.request('GET', API_LINK + "tournaments/" + link + ".json")
     try:
         tourney = json.loads((yield from tourney.read()).decode())
-        if error in tourney:
+        if tourney.get("error", False):
             return None
         return tourney
     except:
@@ -74,8 +74,9 @@ def printable_tourney_list():
 
     for tourney in tourneys:
         try:
+            if tourney["tournament"].get("completed_at", None) is not None:
+                continue
             description = tourney['tournament'].get("description")
-
             tourney_strings.append("{name}: {link} - {participants} signups".format(
                 **{
                     "name": tourney['tournament'].get("name", "Untitled"),

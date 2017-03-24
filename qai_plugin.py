@@ -909,6 +909,15 @@ class Plugin(object):
 
     @command
     @asyncio.coroutine
+    def tournaments(self, mask, target, args):
+        """Check tourneys
+
+            %%tournaments
+        """
+        yield from self.tourneys(mask, target, args)
+
+    @command(show_in_help_list=False)
+    @asyncio.coroutine
     def tourneys(self, mask, target, args):
         """Check tourneys
 
