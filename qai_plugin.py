@@ -142,6 +142,8 @@ class Plugin(object):
             lowercaseMsg = msg.lower()
             for reactionword in REACTIONWORDS:
                 if reactionword in lowercaseMsg:
+                    if self.spam_protect('rword-'+reactionword, sender, channel, args, noPenalty=True):
+                        continue
                     self.bot.privmsg(channel, REACTIONWORDS[reactionword].format(**{
                         "sender" : sender.nick,
                     }))
@@ -497,12 +499,14 @@ class Plugin(object):
             pass
         self.bot.action(target, "Find more here: {}".format(YOUTUBE_NON_API_SEARCH_LINK))
 
-    def spam_protect(self, cmd, mask, target, args):
+    def spam_protect(self, cmd, mask, target, args, noPenalty = False):
         if not cmd in self.timers:
             self.timers[cmd] = {}
         if not target in self.timers[cmd]:
             self.timers[cmd][target] = 0
         if time.time() - self.timers[cmd][target] <= self.bot.config['spam_protect_time']:
+            if noPenalty:
+                return True
             try: 
                 self._rage[mask.nick] += 1
             except:
@@ -758,6 +762,17 @@ class Plugin(object):
             self.bot.privmsg(mask.nick, str(len(words)) + " checked badwords:")
             for word in words.keys():
                 self.bot.privmsg(mask.nick, '- word: "%s", gravity: %s' % (word, words[word]))
+
+    @command
+    @asyncio.coroutine
+    def rwords(self, mask, target, args):
+        """Prints the list of checked reactionwords
+
+            %%rwords
+        """
+        if self.spam_protect('rwords', mask, target, args):
+            return
+        self.bot.privmsg(target, "Checked reactionwords: " + ", ".join(REACTIONWORDS.keys()))
 
     @command(permission='admin', public=False, show_in_help_list=False)
     @asyncio.coroutine
