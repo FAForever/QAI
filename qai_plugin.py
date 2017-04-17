@@ -32,7 +32,7 @@ HITBOX_STREAMS = "https://api.hitbox.tv/media/live/list?filter=popular&game=811&
 YOUTUBE_NON_API_SEARCH_LINK = "https://www.youtube.com/results?search_query=supreme+commander+%7C+forged+alliance&search_sort=video_date_uploaded&filters=video"
 YOUTUBE_SEARCH = "https://www.googleapis.com/youtube/v3/search?order=date&type=video&part=snippet&q=Forged%2BAlliance|Supreme%2BCommander&relevanceLanguage=en&maxResults=15&key={}"
 YOUTUBE_DETAIL = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id={}&key={}"
-YOUTUBE_STREAMS = "https://content.googleapis.com/youtube/v3/search?eventType=live&maxResults=5&order=viewCount&part=snippet&q=Forged%2BAlliance|Supreme%2BCommander&relevanceLanguage=en&type=video&key={}"
+YOUTUBE_STREAMS = "https://content.googleapis.com/youtube/v3/search?eventType=live&maxResults=5&order=viewCount&part=snippet&q=Supreme%2BCommander&relevanceLanguage=en&type=video&key={}"
 LETMEGOOGLE = "http://lmgtfy.com/?q="
 URL_MATCH = ".*(https?:\/\/[^ ]+\.[^ ]*).*"
 REPLAY_MATCH = ".*(#[0-9]+).*"
