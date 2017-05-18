@@ -1,7 +1,4 @@
 aiohttp==2.0.7
-aiomysql==0.0.9
-configobj==5.0.6
 irc3==1.0.0
 pytest==3.0.7
 slackclient==1.0.5
-websockets==3.3
