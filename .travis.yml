@@ -1,11 +1,10 @@
 language: python
 
 python:
-  - "2.7"
+  - "3.5"
 
 install:
-  - cp fafbot.conf.example fafbot.conf
-  - wget https://raw.githubusercontent.com/FAForever/server/develop/passwords.py.example -O passwords.py
+  - cp config.ini.example config.ini
   - pip install -r requirements.txt
   - pip install pytest-cov python-coveralls
 
