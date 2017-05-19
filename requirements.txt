@@ -1,7 +1,4 @@
-aiohttp
-aiomysql
-configobj
-irc3
-pytest
-slackclient
-websockets
+aiohttp==2.0.7
+irc3==1.0.0
+pytest==3.0.7
+slackclient==1.0.5

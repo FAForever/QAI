@@ -1,7 +1,7 @@
 # FA Forever - IRC bot
 
-[![Build Status](https://travis-ci.org/FAForever/fafbot.svg?branch=master)](https://travis-ci.org/FAForever/fafbot)
-[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/FAForever/fafbot/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/FAForever/fafbot/?branch=master)
+[![Build Status](https://travis-ci.org/FAForever/QAI.svg?branch=master)](https://travis-ci.org/FAForever/QAI)
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/FAForever/QAI/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/FAForever/QAI/?branch=master)
 
 This is the source code for the [Forged Alliance Forever](http://www.faforever.com/) IRC bot.
 
