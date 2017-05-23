@@ -7,6 +7,10 @@ COPY requirements.txt /tmp/requirements.txt
 
 RUN pip install --upgrade --trusted-host content.dev.faforever.com -r /tmp/requirements.txt
 
-RUN cat /config/config.ini
+ADD . /code/
+WORKDIR /code/
 
-CMD irc3 /config/config.ini
+VOLUME /config
+
+# irc3 searches for the plugin files in the folder of the configuration file
+CMD cp /config/config.ini ./config.ini && irc3 config.ini
