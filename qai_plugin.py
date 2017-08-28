@@ -346,6 +346,21 @@ class Plugin(object):
 
     @command(permission='admin', public=False, show_in_help_list=False)
     @asyncio.coroutine
+    def mode(self, mask, target, args):
+        """mode
+
+            %%mode <channel> <mode> <nick>
+        """
+        #if not (yield from self.__isNickservIdentified(mask.nick)):
+        #    return
+        self.bot.send_line('MODE {} {} {}'.format(
+            args.get('<channel>'),
+            args.get('<mode>'),
+            args.get('<nick>'),
+        ), nowait=True)
+
+    @command(permission='admin', public=False, show_in_help_list=False)
+    @asyncio.coroutine
     def reload(self, mask, target, args):
         """Reboot the mainframe
 
