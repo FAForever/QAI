@@ -23,7 +23,7 @@ in [the server repo](https://github.com/FAForever/server).
 
 ## Usage
 
-    irc3 config.ini
+    python3 -m irc3 ../config.ini
 
 ## Running the tests
 
