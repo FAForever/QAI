@@ -4,7 +4,7 @@ python:
   - "3.6"
 
 install:
-  - cp local.config.ini.example local.config.ini
+  - cp config.ini.example config.ini
   - pip install -r requirements.txt
   - pip install pytest-cov python-coveralls
 
