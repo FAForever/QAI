@@ -1,10 +1,10 @@
 language: python
 
 python:
-  - "3.5"
+  - "3.6"
 
 install:
-  - cp config.ini.example config.ini
+  - cp local.config.ini.example local.config.ini
   - pip install -r requirements.txt
   - pip install pytest-cov python-coveralls
 

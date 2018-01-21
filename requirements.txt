@@ -1,4 +1,6 @@
-aiohttp
-irc3
-pytest
-slackclient
+aiohttp==2.3.9
+irc3==1.0.2
+pytest==3.3.2
+slackclient==1.1.0
+httplib2==0.10.3
+urlparse2==1.1.1
