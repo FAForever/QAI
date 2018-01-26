@@ -3,6 +3,7 @@ import urlparse2
 import urllib
 import json
 
+
 def join_paths(*paths):
     request_path = []
     for path in paths:
@@ -19,16 +20,18 @@ def join_paths(*paths):
         path = path[:-1]
     return path
 
+
 class RestResponse(object):
     def __init__(self, response, content):
         self.response = response
         self.content = content
+        if not hasattr(self, '_json'):
+            self._json = json.loads(self.content)
 
     @property
     def json(self):
-        if not hasattr(self, '_json'):
-            self._json = json.loads(self.content)
         return self._json
+
 
 class RestRequester(object):
     def __init__(self, base_url=None):
@@ -42,8 +45,8 @@ class RestRequester(object):
 
     def get(self, path, args=None, headers={}):
         return self.request(self.base_scheme, self.base_host,
-                join_paths(self.base_path, path), 'GET', args=args,
-                headers=headers)
+                            join_paths(self.base_path, path), 'GET', args=args,
+                            headers=headers)
 
     def get_absolute(self, url, args=None, headers={}):
         scheme, host, path = urlparse2.urlsplit(url)
@@ -51,8 +54,8 @@ class RestRequester(object):
 
     def post(self, path, args=None, body=None, headers={}):
         return self.request(self.base_scheme, self.base_host,
-                join_paths(self.base_path, path), 'POST', args=args,
-                body=body, headers=headers)
+                            join_paths(self.base_path, path), 'POST', args=args,
+                            body=body, headers=headers)
 
     def post_absolute(self, url, args=None, body=None, headers={}):
         scheme, host, path = urlparse2.urlsplit(url)
@@ -60,8 +63,8 @@ class RestRequester(object):
 
     def put(self, path, args=None, body=None, headers={}):
         return self.request(self.base_scheme, self.base_host,
-                join_paths(self.base_path, path), 'PUT', args=args,
-                body=body, headers=headers)
+                            join_paths(self.base_path, path), 'PUT', args=args,
+                            body=body, headers=headers)
 
     def put_absolute(self, url, args=None, body=None, headers={}):
         scheme, host, path = urlparse2.urlsplit(url)
@@ -69,8 +72,8 @@ class RestRequester(object):
 
     def delete(self, path, args=None, headers={}):
         return self.request(self.base_scheme, self.base_host,
-                join_paths(self.base_path, path), 'DELETE', args=args,
-                headers=headers)
+                            join_paths(self.base_path, path), 'DELETE', args=args,
+                            headers=headers)
 
     def delete_absolute(self, url, args=None, headers={}):
         scheme, host, path = urlparse2.urlsplit(url)
@@ -78,15 +81,15 @@ class RestRequester(object):
 
     def head(self, path, args=None, headers={}):
         return self.request(self.base_scheme, self.base_host,
-                join_paths(self.base_path, path), 'GET', args=args,
-                headers=headers)
+                            join_paths(self.base_path, path), 'GET', args=args,
+                            headers=headers)
 
     def head_absolute(self, url, args=None, headers={}):
         scheme, host, path = urlparse2.urlsplit(url)
         return self.request(scheme, host, path, 'HEAD', args=args, headers=headers)
 
     def request(self, scheme, host, path, method='GET', args=None, body=None, headers={}):
-        headers['User-Agent']= 'Basic Agent'
+        headers['User-Agent'] = 'Basic Agent'
 
         if args:
             if method == 'GET':
@@ -96,4 +99,4 @@ class RestRequester(object):
                 body = urllib.urlencode(args, True)
 
         return RestResponse(*self.h.request(u'%s://%s%s' % (scheme, host, path),
-                method.upper(), body=body, headers=headers))
+                                            method.upper(), body=body, headers=headers))

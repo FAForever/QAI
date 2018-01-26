@@ -54,10 +54,10 @@ class Plugin(object):
         global ALL_TAUNTS, NICKSERVIDENTIFIEDRESPONSESLOCK
         ALL_TAUNTS.extend(TAUNTS)
         ALL_TAUNTS.extend(SPAM_PROTECT_TAUNTS)
-        challonge.setChallongeData(self.bot.config['challonge_username'], self.bot.config['challonge_api_key'])
+        challonge.set_challonge_data(self.bot.config['challonge_username'], self.bot.config['challonge_api_key'])
         NICKSERVIDENTIFIEDRESPONSESLOCK = threading.Lock()
 
-        self.slackThread = slack.slackThread(self.bot.config['slack_api_key'])
+        self.slackThread = slack.SlackThread(self.bot.config['slack_api_key'])
         self.slackThread.daemon = True
         self.slackThread.start()
 
@@ -89,7 +89,7 @@ class Plugin(object):
 
         repetitions = self.__dbGet(['repetitions', 'text'])
         for t in repetitions.keys():
-            REPETITIONS[t] = repetition.repetitionThread(self.bot, repetitions[t].get('channel'), repetitions[t].get('text'), int(repetitions[t].get('seconds')))
+            REPETITIONS[t] = repetition.RepetitionThread(self.bot, repetitions[t].get('channel'), repetitions[t].get('text'), int(repetitions[t].get('seconds')))
             REPETITIONS[t].daemon = True
             REPETITIONS[t].start()
 
@@ -852,7 +852,7 @@ class Plugin(object):
                     "text": WORDS,
                     "channel": channel,
                 })
-                REPETITIONS[ID] = repetition.repetitionThread(self.bot, channel, WORDS, int(seconds))
+                REPETITIONS[ID] = repetition.RepetitionThread(self.bot, channel, WORDS, int(seconds))
                 REPETITIONS[ID].daemon = True
                 REPETITIONS[ID].start()
                 return 'Done.'
@@ -972,7 +972,7 @@ class Plugin(object):
         if gravity >= self.bot.config['report_to_irc_threshold']:
             self.bot.privmsg('#' + self.bot.config['report_to_irc_channel'], reportMsg)
         if gravity >= self.bot.config['report_to_slack_threshold']:
-            self.slackThread.sendMessageToChannel(self.bot.config['report_to_slack_channel'], reportMsg)
+            self.slackThread.send_message_to_channel(self.bot.config['report_to_slack_channel'], reportMsg)
         if gravity >= self.bot.config['report_instant_kick_threshold']:
             self._taunt(channel=channel, prefix=name, tauntTable=KICK_TAUNTS)
             self.bot.privmsg(channel, "!kick {}".format(name))

@@ -6,29 +6,35 @@ import aiohttp
 import string
 
 USER = ""
-APIKEY = ""
+API_KEY = ""
 API_LINK = ""
 
-def setChallongeData(username, apikey):
-    global USER, APIKEY, API_LINK
-    USER, APIKEY, API_LINK = username, apikey, "https://"+username+":"+apikey+"@api.challonge.com/v1/"
+
+def set_challonge_data(username, apikey):
+    global USER, API_KEY, API_LINK
+    USER, API_KEY, API_LINK = username, apikey, "https://" + username + ":" + apikey + "@api.challonge.com/v1/"
 
 # http://api.challonge.com/v1
-#----------------------------------------------
+# ----------------------------------------------
 
-def getFAFDefaultSettings():
+
+def get_faf_default_settings():
     # they will have to converted into the 'tournament[name]' style
     return {
         "name": "Blitz tournament",
         "description": "Automatically generated tournament",
-        "tournament_type" : "single elimination",               #"single elimination", "double elimination", "round robin", "swiss"
-        #"hold_third_place_match" : True,
-        #"open_signup" : False,
-        #"ranked_by" : "match wins",
-        #"signup_cap" : 32,
+        "tournament_type" : "single elimination",
+        # "single elimination",
+        # "double elimination",
+        # "round robin", "swiss"
+        # "hold_third_place_match" : True,
+        # "open_signup" : False,
+        # "ranked_by" : "match wins",
+        # "signup_cap" : 32,
     }
 
-def __buildJSONParams(params, prefix=None):
+
+def __build_json_params(params, prefix=None):
     p = {}
     for key in params.keys():
         if prefix:
@@ -38,7 +44,8 @@ def __buildJSONParams(params, prefix=None):
 
     return p
 
-#----------------------------------------------
+# ----------------------------------------------
+
 
 @asyncio.coroutine
 def tourney_list():
@@ -48,8 +55,9 @@ def tourney_list():
     except:
         return []
 
+
 @asyncio.coroutine
-def getTourneyByLink(link):
+def get_tourney_by_link(link):
     tourney = yield from aiohttp.request('GET', API_LINK + "tournaments/" + link + ".json")
     try:
         tourney = json.loads((yield from tourney.read()).decode())
@@ -59,13 +67,18 @@ def getTourneyByLink(link):
     except:
         return None
 
+
 @asyncio.coroutine
-def getAvailableTourneyLink():
+def get_available_tourney_link():
     while True:
-        link = 'FAF_'+''.join(random.SystemRandom().choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(10))
-        isAvailable = ((yield from getTourneyByLink(link)) == None)
-        if isAvailable:
+        link = 'FAF_'
+        for _ in range(10):
+            value = string.ascii_uppercase + string.ascii_lowercase + string.digits
+            link += ''.join(random.SystemRandom().choice(value))
+        is_available = ((yield from get_tourney_by_link(link)) is None)
+        if is_available:
             return link
+
 
 @asyncio.coroutine
 def printable_tourney_list():
@@ -76,7 +89,7 @@ def printable_tourney_list():
         try:
             if tourney["tournament"].get("completed_at", None) is not None:
                 continue
-            description = tourney['tournament'].get("description")
+            # description = tourney['tournament'].get("description")
             tourney_strings.append("{name}: {link} - {participants} signups".format(
                 **{
                     "name": tourney['tournament'].get("name", "Untitled"),
@@ -87,6 +100,7 @@ def printable_tourney_list():
             continue
     return tourney_strings
 
+
 @asyncio.coroutine
 def printable_tourney_list_ids():
     tourneys = yield from tourney_list()
@@ -94,7 +108,7 @@ def printable_tourney_list_ids():
 
     for tourney in tourneys:
         try:
-            description = tourney['tournament'].get("description")
+            # description = tourney['tournament'].get("description")
 
             tourney_strings.append("{id}: \"{name}\"".format(
                 **{
@@ -105,24 +119,20 @@ def printable_tourney_list_ids():
             continue
     return tourney_strings
 
+
 @asyncio.coroutine
 def create_tourney(args):
-    link = yield from getAvailableTourneyLink()
+    link = yield from get_available_tourney_link()
 
-    defaults = getFAFDefaultSettings()
+    defaults = get_faf_default_settings()
     for arg in args.keys():
         defaults[arg] = args[arg]
     defaults["url"] = link
 
-    data = __buildJSONParams(defaults, "tournament")
+    data = __build_json_params(defaults, "tournament")
     j = json.dumps(data)
 
     print(data)
     response = yield from aiohttp.request('POST', API_LINK + "tournaments.json", data=j)
     text = json.loads((yield from response.read()).decode())
     print(text)
-
-
-
-
-

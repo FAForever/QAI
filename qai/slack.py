@@ -4,7 +4,7 @@ import time
 from slackclient import SlackClient
 
 
-class slackThread(threading.Thread):
+class SlackThread(threading.Thread):
     def __init__(self, apikey):
         threading.Thread.__init__(self)
         self.APIKEY = apikey
@@ -18,14 +18,13 @@ class slackThread(threading.Thread):
         }
         self.ready = False
 
-
     def run(self):
         works = True
         self.CON = self.SC.rtm_connect()
-        if self.CON == False:
+        if not self.CON:
             print('Failed starting a Slack RTM session.')
             works = False
-        if not self.rebuildData():
+        if not self.rebuild_data():
             print('Failed accessing slack data.')
             works = False
         if works:
@@ -35,29 +34,28 @@ class slackThread(threading.Thread):
             print('Slack connection not established')
             return
 
-        countForPing = 0
+        count_for_ping = 0
         while True:
             for event in self.SC.rtm_read():
                 try:
                     self.handledEvents[event['type']](event)
                 except:
-                    #print(event)
+                    # print(event)
                     pass
-            countForPing += 0.1
-            if countForPing > 3:
+            count_for_ping += 0.1
+            if count_for_ping > 3:
                 self.SC.server.ping()
-                countForPing = 0
+                count_for_ping = 0
             time.sleep(0.1)
 
-
-    def rebuildData(self):
+    def rebuild_data(self):
         self.lock.acquire()
-        test = False
+        # test = False
         try:
             test = json.loads((self.SC.api_call("api.test")).decode())
         except:
             return False
-        if test.get('ok') == False:
+        if not test.get('ok'):
             print('API Test failed. Full response:')
             print(test)
             self.lock.release()
@@ -75,58 +73,50 @@ class slackThread(threading.Thread):
         self.lock.release()
         return True
 
-
-    def __getMessageId(self):
+    def __get_message_id(self):
         self.lock.acquire()
-        mId = self.messageId
+        m_id = self.messageId
         self.messageId += 1
         self.lock.release()
-        return mId
+        return m_id
 
+    def __get_user_id(self, name):
+        return self.__get_id('users', name)
 
-    def __getUserId(self, name):
-        return self.__getId('users', name)
+    def __get_channel_id(self, name):
+        return self.__get_id('channels', name)
 
-
-    def __getChannelId(self, name):
-        return self.__getId('channels', name)
-
-
-    def __getId(self, sub, name):
+    def __get_id(self, sub, name):
         if self.ready:
             for key in self.DATA[sub].keys():
                 if self.DATA[sub][key]['name'] == name:
                     return key
             return None
 
-
-    def __getPmChannelId(self, name):
-        user = self.__getUserId(name)
-        if user == None:
+    def __get_pm_channel_id(self, name):
+        user = self.__get_user_id(name)
+        if user is None:
             return None
-        channelId = self.DATA['users'][user].get('pm_channel_id')
-        if channelId == None:
+        channel_id = self.DATA['users'][user].get('pm_channel_id')
+        if channel_id is None:
             data = json.loads((self.SC.api_call("im.open", user=user)).decode())
-            channelId = data["channel"]["id"]
-            self.DATA['users'][user]['pm_channel_id'] = channelId
-        return channelId
+            channel_id = data["channel"]["id"]
+            self.DATA['users'][user]['pm_channel_id'] = channel_id
+        return channel_id
 
-
-    def sendMessageToUser(self, user, text):
-        channelId = self.__getPmChannelId(user)
-        if channelId == None:
+    def send_message_to_user(self, user, text):
+        channel_id = self.__get_pm_channel_id(user)
+        if channel_id is None:
             return
-        self.__sendMessage(channelId, text)
+        self.__send_message(channel_id, text)
 
-
-    def sendMessageToChannel(self, channel, text):
-        channelId = self.__getChannelId(channel)
-        if channelId == None:
+    def send_message_to_channel(self, channel, text):
+        channel_id = self.__get_channel_id(channel)
+        if channel_id is None:
             return
-        self.__sendMessage(channelId, text)
+        self.__send_message(channel_id, text)
 
-
-    def __sendMessage(self, target, text):
+    def __send_message(self, target, text):
         self.lock.acquire()
         self.SC.api_call(
             "chat.postMessage",
@@ -135,7 +125,6 @@ class slackThread(threading.Thread):
             text=text)
         self.lock.release()
 
-
     def __event__message(self, event):
-        #print(self.DATA['users'][event['user']]['name'] + ": " + event['text'])
+        # print(self.DATA['users'][event['user']]['name'] + ": " + event['text'])
         pass
