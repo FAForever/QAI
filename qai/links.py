@@ -19,6 +19,7 @@ LINKS = {
 
     "wwpc":         "World Wide People's Championship: http://forums.faforever.com/viewtopic.php?f=26&t=13780",
 }
+
 LINKS_SYNONYMES = {"techsupport": LINKS["support"], "git": LINKS["github"], "whatsnew": LINKS["news"],
                    "parser": LINKS["replayparser"], "replays": LINKS["replayparser"],
                    "parsereplay": LINKS["replayparser"], "blog": LINKS["dev"], "development": LINKS["dev"],
