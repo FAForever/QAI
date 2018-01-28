@@ -5,11 +5,11 @@ from slackclient import SlackClient
 
 
 class SlackThread(threading.Thread):
-    def __init__(self, apikey):
+    def __init__(self, api_key):
         threading.Thread.__init__(self)
-        self.APIKEY = apikey
+        self.API_KEY = api_key
         self.DATA = {}
-        self.SC = SlackClient(self.APIKEY)
+        self.SC = SlackClient(self.API_KEY)
         self.CON = None
         self.lock = threading.Lock()
         self.messageId = 0
@@ -39,7 +39,7 @@ class SlackThread(threading.Thread):
             for event in self.SC.rtm_read():
                 try:
                     self.handledEvents[event['type']](event)
-                except:
+                except Exception as ex:
                     # print(event)
                     pass
             count_for_ping += 0.1
@@ -53,7 +53,7 @@ class SlackThread(threading.Thread):
         # test = False
         try:
             test = json.loads((self.SC.api_call("api.test")).decode())
-        except:
+        except Exception as ex:
             return False
         if not test.get('ok'):
             print('API Test failed. Full response:')
