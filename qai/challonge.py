@@ -1,7 +1,6 @@
 import json
 import random
 import asyncio
-import re
 import aiohttp
 import string
 

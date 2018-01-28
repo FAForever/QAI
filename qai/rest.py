@@ -1,5 +1,4 @@
-import httplib2
-import urlparse2
+import http.client
 import urllib
 import json
 
@@ -37,11 +36,11 @@ class RestRequester(object):
     def __init__(self, base_url=None):
         if base_url:
             self.set_base_url(base_url)
-        self.h = httplib2.Http(".cache")
+        self.h = http.client.Http(".cache")
 
     def set_base_url(self, base_url):
-        self.base_url = urlparse2.urlparse(base_url)
-        self.base_scheme, self.base_host, self.base_path, query, fragment = urlparse2.urlsplit(base_url)
+        self.base_url = urllib.parse(base_url)
+        self.base_scheme, self.base_host, self.base_path, query, fragment = urllib.urlsplit(base_url)
 
     def get(self, path, args=None, headers={}):
         return self.request(self.base_scheme, self.base_host,
@@ -49,7 +48,7 @@ class RestRequester(object):
                             headers=headers)
 
     def get_absolute(self, url, args=None, headers={}):
-        scheme, host, path = urlparse2.urlsplit(url)
+        scheme, host, path = urllib.urlsplit(url)
         return self.request(scheme, host, path, 'GET', args=args, headers=headers)
 
     def post(self, path, args=None, body=None, headers={}):
@@ -58,7 +57,7 @@ class RestRequester(object):
                             body=body, headers=headers)
 
     def post_absolute(self, url, args=None, body=None, headers={}):
-        scheme, host, path = urlparse2.urlsplit(url)
+        scheme, host, path = urllib.urlsplit(url)
         return self.request(scheme, host, path, 'POST', args=args, body=body, headers=headers)
 
     def put(self, path, args=None, body=None, headers={}):
@@ -67,7 +66,7 @@ class RestRequester(object):
                             body=body, headers=headers)
 
     def put_absolute(self, url, args=None, body=None, headers={}):
-        scheme, host, path = urlparse2.urlsplit(url)
+        scheme, host, path = urllib.urlsplit(url)
         return self.request(scheme, host, path, 'PUT', args=args, body=body, headers=headers)
 
     def delete(self, path, args=None, headers={}):
@@ -76,7 +75,7 @@ class RestRequester(object):
                             headers=headers)
 
     def delete_absolute(self, url, args=None, headers={}):
-        scheme, host, path = urlparse2.urlsplit(url)
+        scheme, host, path = urllib.urlsplit(url)
         return self.request(scheme, host, path, 'DELETE', args=args, headers=headers)
 
     def head(self, path, args=None, headers={}):
@@ -85,7 +84,7 @@ class RestRequester(object):
                             headers=headers)
 
     def head_absolute(self, url, args=None, headers={}):
-        scheme, host, path = urlparse2.urlsplit(url)
+        scheme, host, path = urllib.urlsplit(url)
         return self.request(scheme, host, path, 'HEAD', args=args, headers=headers)
 
     def request(self, scheme, host, path, method='GET', args=None, body=None, headers={}):
@@ -98,5 +97,9 @@ class RestRequester(object):
                 headers['Content-Type'] = 'application/x-www-form-urlencoded'
                 body = urllib.urlencode(args, True)
 
-        return RestResponse(*self.h.request(u'%s://%s%s' % (scheme, host, path),
-                                            method.upper(), body=body, headers=headers))
+        return RestResponse(
+            *self.h.request(
+                u'%s://%s%s' % (scheme, host, path),
+                method.upper(),
+                body=body,
+                headers=headers))
