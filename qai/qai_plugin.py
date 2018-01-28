@@ -691,7 +691,7 @@ class Plugin(object):
         """
         if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
-        get, add, delete, join, leave, groupname, playername, TEXT = args.get('get'), args.get('add'), args.get(
+        get, add, delete, join, leave, groupname, playername, text = args.get('get'), args.get('add'), args.get(
             'del'), args.get('join'), args.get('leave'), args.get('<groupname>'), args.get('<playername>'), " ".join(
             args.get('TEXT'))
         player_groups = self.__dbGet(['groups', 'playergroups'])
@@ -708,9 +708,9 @@ class Plugin(object):
 
         if add:
             if groupname in player_groups.keys():
-                self.__dbAdd(['groups', 'playergroups', groupname], 'text', TEXT, overwrite_if_exists=True)
+                self.__dbAdd(['groups', 'playergroups', groupname], 'text', text, overwrite_if_exists=True)
                 return "Group with that name already exists. The old message was replaced, player list stays."
-            self.__dbAdd(['groups', 'playergroups'], groupname, {'text': TEXT, 'players': {}})
+            self.__dbAdd(['groups', 'playergroups'], groupname, {'text': text, 'players': {}})
             return "Done."
 
         if not player_groups.get(groupname):
@@ -756,7 +756,7 @@ class Plugin(object):
 
     @command(permission='admin', public=False, show_in_help_list=False)
     @asyncio.coroutine
-    def badwords(self, mask, target, args):
+    def bad_words(self, mask, target, args):
         """Adds/removes a given keyword from the checklist 
 
             %%badwords get
