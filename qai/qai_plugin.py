@@ -152,7 +152,7 @@ class Plugin(object):
                     self.report(sender.nick, bad_word, channel, msg, BAD_WORDS[bad_word])
 
         if sender.startswith("NickServ!"):
-            self.__handleNickservMessage(msg)
+            self.__handle_nick_serv_message(msg)
 
     @command(permission='admin', public=False)
     @asyncio.coroutine
@@ -175,7 +175,7 @@ class Plugin(object):
             %%taunt
             %%taunt <person>
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         p = args.get('<person>')
         if p == self.bot.config['nick']:
@@ -189,7 +189,7 @@ class Plugin(object):
 
             %%explode
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         self.bot.action(target, "explodes")
 
@@ -201,7 +201,7 @@ class Plugin(object):
             %%hug
             %%hug <someone>
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         someone = args['<someone>']
         if someone is None:
@@ -218,7 +218,7 @@ class Plugin(object):
 
             %%flip
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         self.bot.privmsg(target, "(╯°□°）╯︵ ┻━┻")
 
@@ -229,7 +229,7 @@ class Plugin(object):
 
             %%join <channel>
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         self.bot.join(args['<channel>'])
 
@@ -241,7 +241,7 @@ class Plugin(object):
             %%leave
             %%leave <channel>
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         channel = args['<channel>']
         if channel is None:
@@ -320,13 +320,13 @@ class Plugin(object):
 
             %%offlinemessage <playername> WORDS ...
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         player_name, message = args.get('<playername>'), " ".join(args.get('WORDS'))
         if mask.nick == player_name:
             self._taunt(mask.nick)
             return
-        is_online, channel = self.__isInBotChannel(player_name)
+        is_online, channel = self.__is_in_bot_channel(player_name)
         if is_online:
             return "The player is online in " + channel + ", tell him yourself."
         self.__dbAdd(['offlinemessages', player_name], mask.nick,
@@ -343,7 +343,7 @@ class Plugin(object):
 
             %%puppet <target> WORDS ...
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         t = args.get('<target>')
         m = " ".join(args.get('WORDS'))
@@ -371,7 +371,7 @@ class Plugin(object):
 
             %%reload
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         self.bot.reload(self.bot.config['nick'])
 
@@ -382,7 +382,7 @@ class Plugin(object):
 
             %%slap <guy>
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         self.bot.action(target, "slaps %s " % args['<guy>'])
 
@@ -399,9 +399,9 @@ class Plugin(object):
 
     def _tryDeliverOfflineMessages(self, receiver):
         if OFFLINE_MESSAGE_RECEIVERS.get(receiver, False):
-            isOnline, _ = self.__isInBotChannel(receiver)
+            isOnline, _ = self.__is_in_bot_channel(receiver)
             if isOnline:
-                if self.__isNickservIdentified(receiver):
+                if self.__is_nick_serv_identified(receiver):
                     messages = self.__dbGet(['offlinemessages', receiver]).values()
                     for m in messages:
                         self.bot.privmsg(receiver, '"{message}" - Sent by {sender}, {time}'.format(**{
@@ -545,7 +545,8 @@ class Plugin(object):
         self._rage = {}
         self.timers[cmd][target] = time.time()
 
-    def __handleNickservMessage(self, message):
+    @staticmethod
+    def __handle_nick_serv_message(message):
         if message.startswith('STATUS'):
             words = message.split(" ")
             global NICK_SERV_IDENTIFIED_RESPONSES, NICK_SERV_IDENTIFIED_RESPONSES_LOCK
@@ -554,10 +555,10 @@ class Plugin(object):
             NICK_SERV_IDENTIFIED_RESPONSES_LOCK.release()
 
     @asyncio.coroutine
-    def __isNickservIdentified(self, nick):
+    def __is_nick_serv_identified(self, nick):
         self.bot.privmsg('nickserv', "status {}".format(nick))
-        remainingTries = 20
-        while remainingTries > 0:
+        remaining_tries = 20
+        while remaining_tries > 0:
             if NICK_SERV_IDENTIFIED_RESPONSES.get(nick):
                 value = NICK_SERV_IDENTIFIED_RESPONSES[nick]
                 NICK_SERV_IDENTIFIED_RESPONSES_LOCK.acquire()
@@ -566,29 +567,30 @@ class Plugin(object):
                 if int(value) == 3:
                     return True
                 return False
-            remainingTries -= 1
+            remaining_tries -= 1
             yield from asyncio.sleep(0.1)
         return False
 
-    def __isInBotChannel(self, player):
+    def __is_in_bot_channel(self, player):
         for channel in self.bot.channels:
-            if self.__isInChannel(player, self.bot.channels[channel]):
+            if self.__is_in_channel(player, self.bot.channels[channel]):
                 return True, channel
         return False, ""
 
-    def __isInChannel(self, player, channel):
+    @staticmethod
+    def __is_in_channel(player, channel):
         if player in channel:
             return True
         return False
 
-    def __filterForPlayersInChannel(self, playerlist, channelname):
+    def __filter_for_players_in_channel(self, playerlist, channelname):
         players = {}
         # TODO CHECK 'not var in' vs 'var not in'
         if channelname not in self.bot.channels:
             return players
         channel = self.bot.channels[channelname]
         for p in playerlist.keys():
-            if self.__isInChannel(p, channel):
+            if self.__is_in_channel(p, channel):
                 players[p] = True
         return players
 
@@ -623,21 +625,21 @@ class Plugin(object):
 
             %%groupping <groupname>
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
-        groupname = args.get('<groupname>')
-        playergroups = self.__dbGet(['groups', 'playergroups'])
-        if not playergroups.get(groupname):
+        group_name = args.get('<groupname>')
+        player_groups = self.__dbGet(['groups', 'playergroups'])
+        if not player_groups.get(group_name):
             return
-        players, text = playergroups[groupname].get('players', {}), playergroups[groupname].get('text', "")
-        playerlist = self.__filterForPlayersInChannel(players, target)
+        players, text = player_groups[group_name].get('players', {}), player_groups[group_name].get('text', "")
+        player_list = self.__filter_for_players_in_channel(players, target)
         if not players.get(mask.nick):
             self._taunt(channel=target, prefix=mask.nick, tauntTable=TAUNTS)
             return
-        if self.spam_protect('groupping_' + groupname, mask, target, args):
+        if self.spam_protect('grouping_' + group_name, mask, target, args):
             return
         self.bot.privmsg(target, text + " " + mask.nick + " requests your presence!")
-        self.bot.privmsg(target, ", ".join(playerlist))
+        self.bot.privmsg(target, ", ".join(player_list))
 
     @command(public=False)
     @asyncio.coroutine
@@ -648,7 +650,7 @@ class Plugin(object):
             %%group join <groupname>
             %%group leave <groupname>
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         get, join, leave, groupname = args.get('get'), args.get('join'), args.get('leave'), args.get('<groupname>')
         player_groups = self.__dbGet(['groups', 'playergroups'])
@@ -678,7 +680,7 @@ class Plugin(object):
 
     @command(permission='admin', public=False, show_in_help_list=False)
     @asyncio.coroutine
-    def groupmanage(self, mask, target, args):
+    def group_manage(self, mask, target, args):
         """Allows admins to manage groups
 
             %%groupmanage get
@@ -687,7 +689,7 @@ class Plugin(object):
             %%groupmanage join <groupname> <playername>
             %%groupmanage leave <groupname> <playername>
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         get, add, delete, join, leave, groupname, playername, TEXT = args.get('get'), args.get('add'), args.get(
             'del'), args.get('join'), args.get('leave'), args.get('<groupname>'), args.get('<playername>'), " ".join(
@@ -733,7 +735,7 @@ class Plugin(object):
             %%blacklist add USER ...
             %%blacklist del USER ...
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         add, delete, get, user = args.get('add'), args.get('del'), args.get('get'), " ".join(args.get('USER'))
         if get:
@@ -761,7 +763,7 @@ class Plugin(object):
             %%badwords add <word> <gravity>
             %%badwords del <word>
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         global BAD_WORDS
         add, delete, get, word, gravity = args.get('add'), args.get('del'), args.get('get'), args.get(
@@ -803,7 +805,7 @@ class Plugin(object):
 
     @command(permission='admin', public=False, show_in_help_list=False)
     @asyncio.coroutine
-    def reactionwords(self, mask, target, args):
+    def reaction_words(self, mask, target, args):
         """Adds/removes a given keyword from the checklist.
         "{sender}" in the reply text will be replaced by the name of the person who triggered the response.
 
@@ -811,7 +813,7 @@ class Plugin(object):
             %%reactionwords add <word> REPLY ...
             %%reactionwords del <word>
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         global REACTION_WORDS
         add, delete, get, word, reply = args.get('add'), args.get('del'), args.get('get'), args.get('<word>'), " ".join(
@@ -849,7 +851,7 @@ class Plugin(object):
             %%repeat add <ID> <seconds> <channel> WORDS ...
             %%repeat del <ID>
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         global REPETITIONS
         # TODO Check if id_player could be named better and if words works in lowercase.
@@ -896,7 +898,7 @@ class Plugin(object):
 
             %%move <nick> <channel>
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         channel, nick = args.get('<channel>'), args.get('<nick>')
         self.move_user(channel, nick)
@@ -912,7 +914,7 @@ class Plugin(object):
             %%chatlist add <channel> <user>
             %%chatlist del <channel> <user>
         """
-        if not (yield from self.__isNickservIdentified(mask.nick)):
+        if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         channel, user, add, remove = args.get('<channel>'), args.get('<user>'), args.get('add'), args.get('del')
         if not add and not remove:
