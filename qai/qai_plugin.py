@@ -25,7 +25,7 @@ NICK_SERV_IDENTIFIED_RESPONSES = {}
 NICK_SERV_IDENTIFIED_RESPONSES_LOCK = None
 MAIN_CHANNEL = "#aeolus"
 TWITCH_API_LOGIN = "https://api.twitch.tv/kraken/users/"
-TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+Forged+Alliance"  # add the game name at the end of the link (space = "+", eg: Game+Name)
+TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+Forged+Alliance" # add the game name at the end of the link (space = "+", eg: Game+Name)
 HIT_BOX_STREAMS = "https://api.hitbox.tv/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
 YOUTUBE_NON_API_SEARCH_LINK = "https://www.youtube.com/results?search_query=supreme+commander+%7C+forged+alliance&search_sort=video_date_uploaded&filters=video"
 YOUTUBE_SEARCH = "https://www.googleapis.com/youtube/v3/search?order=date&type=video&part=snippet&q=Forged%2BAlliance|Supreme%2BCommander&relevanceLanguage=en&maxResults=15&key={}"
@@ -69,25 +69,25 @@ class Plugin(object):
         self._taunt('#qai_channel')
 
     @irc3.event(irc3.rfc.CONNECTED)
-    def nickserv_auth(self, *args, **kwargs):
+    def nick_serv_auth(self, *args, **kwargs):
         self.bot.privmsg('nickserv', 'identify %s' % self.bot.config['nickserv_password'])
         global REPETITIONS, BAD_WORDS, REACTION_WORDS, OFFLINE_MESSAGE_RECEIVERS
 
-        self.__dbAdd([], 'chatlists', {}, overwrite_if_exists=False)
-        self.__dbAdd([], 'offlinemessages', {}, overwrite_if_exists=False)
-        self.__dbAdd(['repetitions'], 'text', {}, overwrite_if_exists=False)
-        self.__dbAdd(['blacklist'], 'users', {}, overwrite_if_exists=False)
-        self.__dbAdd(['groups'], 'playergroups', {}, overwrite_if_exists=False)
-        self.__dbAdd(['badwords'], 'words', {}, overwrite_if_exists=False)
-        self.__dbAdd(['reactionwords'], 'words', {}, overwrite_if_exists=False)
-        BAD_WORDS = self.__dbGet(['badwords', 'words'])
-        REACTION_WORDS = self.__dbGet(['reactionwords', 'words'])
+        self.__db_add([], 'chatlists', {}, overwrite_if_exists=False)
+        self.__db_add([], 'offlinemessages', {}, overwrite_if_exists=False)
+        self.__db_add(['repetitions'], 'text', {}, overwrite_if_exists=False)
+        self.__db_add(['blacklist'], 'users', {}, overwrite_if_exists=False)
+        self.__db_add(['groups'], 'playergroups', {}, overwrite_if_exists=False)
+        self.__db_add(['badwords'], 'words', {}, overwrite_if_exists=False)
+        self.__db_add(['reactionwords'], 'words', {}, overwrite_if_exists=False)
+        BAD_WORDS = self.__db_get(['badwords', 'words'])
+        REACTION_WORDS = self.__db_get(['reactionwords', 'words'])
 
-        for r in self.__dbGet(['offlinemessages']).keys():
+        for r in self.__db_get(['offlinemessages']).keys():
             OFFLINE_MESSAGE_RECEIVERS[r] = True
-            self._tryDeliverOfflineMessages(r)
+            self._try_deliver_offline_messages(r)
 
-        repetitions = self.__dbGet(['repetitions', 'text'])
+        repetitions = self.__db_get(['repetitions', 'text'])
         for t in repetitions.keys():
             REPETITIONS[t] = repetition.RepetitionThread(self.bot, repetitions[t].get('channel'),
                                                          repetitions[t].get('text'), int(repetitions[t].get('seconds')))
@@ -97,18 +97,18 @@ class Plugin(object):
     @irc3.event(irc3.rfc.JOIN)
     def on_join(self, channel, mask):
         if channel == MAIN_CHANNEL:
-            for channel in self.__dbGet(['chatlists']):
-                if mask.nick in self.__dbGet(['chatlists', channel]).keys():
+            for channel in self.__db_get(['chatlists']):
+                if mask.nick in self.__db_get(['chatlists', channel]).keys():
                     self.move_user(channel, mask.nick)
         if OFFLINE_MESSAGE_RECEIVERS.get(mask.nick, False):
-            self._tryDeliverOfflineMessages(mask.nick)
+            self._try_deliver_offline_messages(mask.nick)
 
     def move_user(self, channel, nick):
         self.bot.privmsg('OperServ', 'svsjoin %s %s' % (nick, channel))
 
     @irc3.event(irc3.rfc.PRIVMSG)
     @asyncio.coroutine
-    def on_privmsg(self, *args, **kwargs):
+    def on_priv_msg(self, *args, **kwargs):
         msg, channel, sender = kwargs['data'], kwargs['target'], kwargs['mask']
         if self.bot.config['nick'] in sender.nick:
             return
@@ -180,7 +180,7 @@ class Plugin(object):
         p = args.get('<person>')
         if p == self.bot.config['nick']:
             p = mask.nick
-        self._taunt(channel=target, prefix=p, tauntTable=TAUNTS)
+        self._taunt(channel=target, prefix=p, taunt_table=TAUNTS)
 
     @command(permission='admin')
     @asyncio.coroutine
@@ -254,7 +254,7 @@ class Plugin(object):
 
             %%gullible
         """
-        self._taunt(channel=target, prefix=mask.nick, tauntTable=SPAM_PROTECT_TAUNTS)
+        self._taunt(channel=target, prefix=mask.nick, taunt_table=SPAM_PROTECT_TAUNTS)
 
     @command
     def link(self, mask, target, args):
@@ -315,7 +315,7 @@ class Plugin(object):
 
     @command(public=False)
     @asyncio.coroutine
-    def offlinemessage(self, mask, target, args):
+    def offline_message(self, mask, target, args):
         """Store an offline message, it is delivered once the person logs on
 
             %%offlinemessage <playername> WORDS ...
@@ -329,9 +329,9 @@ class Plugin(object):
         is_online, channel = self.__is_in_bot_channel(player_name)
         if is_online:
             return "The player is online in " + channel + ", tell him yourself."
-        self.__dbAdd(['offlinemessages', player_name], mask.nick,
-                     {'message': message, 'sender': mask.nick, 'time': str(time.strftime("%d.%m.%Y %H:%M:%S"))},
-                     overwrite_if_exists=False, try_saving_with_new_key=True)
+        self.__db_add(['offlinemessages', player_name], mask.nick,
+                      {'message': message, 'sender': mask.nick, 'time': str(time.strftime("%d.%m.%Y %H:%M:%S"))},
+                      overwrite_if_exists=False, try_saving_with_new_key=True)
         OFFLINE_MESSAGE_RECEIVERS[player_name] = True
         self.bot.privmsg(mask.nick,
                          "The message is saved and will be delivered once " + player_name + " is online again.")
@@ -386,23 +386,23 @@ class Plugin(object):
             return
         self.bot.action(target, "slaps %s " % args['<guy>'])
 
-    def _taunt(self, channel=None, prefix=None, tauntTable=None):
+    def _taunt(self, channel=None, prefix=None, taunt_table=None):
         if channel is None:
             channel = "#qai_channel"
-        if tauntTable is None:
-            tauntTable = ALL_TAUNTS
+        if taunt_table is None:
+            taunt_table = ALL_TAUNTS
         if prefix is None:
             prefix = ''
         else:
             prefix = '%s: ' % prefix
-        self.bot.privmsg(channel, "%s%s" % (prefix, random.choice(tauntTable)))
+        self.bot.privmsg(channel, "%s%s" % (prefix, random.choice(taunt_table)))
 
-    def _tryDeliverOfflineMessages(self, receiver):
+    def _try_deliver_offline_messages(self, receiver):
         if OFFLINE_MESSAGE_RECEIVERS.get(receiver, False):
-            isOnline, _ = self.__is_in_bot_channel(receiver)
-            if isOnline:
+            is_online, _ = self.__is_in_bot_channel(receiver)
+            if is_online:
                 if self.__is_nick_serv_identified(receiver):
-                    messages = self.__dbGet(['offlinemessages', receiver]).values()
+                    messages = self.__db_get(['offlinemessages', receiver]).values()
                     for m in messages:
                         self.bot.privmsg(receiver, '"{message}" - Sent by {sender}, {time}'.format(**{
                             'message': m.get('message', "<message>"),
@@ -410,7 +410,7 @@ class Plugin(object):
                             'time': m.get('time', "<time>"),
                         }))
                     del OFFLINE_MESSAGE_RECEIVERS[receiver]
-                    self.__dbDel(['offlinemessages'], receiver)
+                    self.__db_del(['offlinemessages'], receiver)
 
     @asyncio.coroutine
     def hitbox_streams(self):
@@ -418,12 +418,12 @@ class Plugin(object):
         data = yield from req.read()
         try:
             data = json.loads(data.decode())
-            hitboxstreams = data.get('livestreams', None)
-            if not hitboxstreams:
-                hitboxstreams = data['livestream']
-            livestreams = []
-            for stream in hitboxstreams:
-                livestreams.append({
+            hitbox_streams = data.get('livestreams', None)
+            if not hitbox_streams:
+                hitbox_streams = data['livestream']
+            live_streams = []
+            for stream in hitbox_streams:
+                live_streams.append({
                     'channel': stream["media_display_name"],
                     'text': "%s - %s - %s Since %s (%s viewers) "
                             % (stream["media_display_name"],
@@ -432,7 +432,7 @@ class Plugin(object):
                                stream["media_live_since"],
                                stream["media_views"])
                 })
-            return livestreams
+            return live_streams
         except (KeyError, ValueError):
             return []
 
@@ -499,7 +499,7 @@ class Plugin(object):
         try:
             for item in itertools.takewhile(lambda _: len(casts) < 5, data['items']):
                 channel_title = item['snippet']['channelTitle']
-                if channel_title not in self.__dbGet(['blacklist', 'users']) and channel_title != '':
+                if channel_title not in self.__db_get(['blacklist', 'users']) and channel_title != '':
                     casts.append(item)
                     try:
                         self.bot.action(target,
@@ -536,11 +536,11 @@ class Plugin(object):
                 self._rage[mask.nick] = 1
 
             if self._rage[mask.nick] >= self.bot.config['rage_to_kick']:
-                self._taunt(channel=target, prefix=mask.nick, tauntTable=KICK_TAUNTS)
+                self._taunt(channel=target, prefix=mask.nick, taunt_table=KICK_TAUNTS)
                 self.bot.privmsg(target, "!kick {}".format(mask.nick))
                 self._rage[mask.nick] = 1
             else:
-                self._taunt(channel=target, prefix=mask.nick, tauntTable=SPAM_PROTECT_TAUNTS)
+                self._taunt(channel=target, prefix=mask.nick, taunt_table=SPAM_PROTECT_TAUNTS)
             return True
         self._rage = {}
         self.timers[cmd][target] = time.time()
@@ -606,7 +606,7 @@ class Plugin(object):
         streams = yield from self.hitbox_streams()
         streams.extend((yield from self.twitch_streams()))
         streams.extend((yield from self.youtube_streams()))
-        blacklist = self.__dbGet(['blacklist', 'users'])
+        blacklist = self.__db_get(['blacklist', 'users'])
         for stream in streams:
             if stream["channel"] in blacklist:
                 streams.remove(stream)
@@ -628,13 +628,13 @@ class Plugin(object):
         if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         group_name = args.get('<groupname>')
-        player_groups = self.__dbGet(['groups', 'playergroups'])
+        player_groups = self.__db_get(['groups', 'playergroups'])
         if not player_groups.get(group_name):
             return
         players, text = player_groups[group_name].get('players', {}), player_groups[group_name].get('text', "")
         player_list = self.__filter_for_players_in_channel(players, target)
         if not players.get(mask.nick):
-            self._taunt(channel=target, prefix=mask.nick, tauntTable=TAUNTS)
+            self._taunt(channel=target, prefix=mask.nick, taunt_table=TAUNTS)
             return
         if self.spam_protect('grouping_' + group_name, mask, target, args):
             return
@@ -653,7 +653,7 @@ class Plugin(object):
         if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
         get, join, leave, groupname = args.get('get'), args.get('join'), args.get('leave'), args.get('<groupname>')
-        player_groups = self.__dbGet(['groups', 'playergroups'])
+        player_groups = self.__db_get(['groups', 'playergroups'])
         if get:
             self.bot.privmsg(mask.nick, str(len(player_groups)) + " groups: ")
             for g in player_groups.keys():
@@ -671,11 +671,11 @@ class Plugin(object):
             return "Group does not exist."
         players = player_groups[groupname].get('players', {})
         if join:
-            self.__dbAdd(['groups', 'playergroups', groupname, 'players'], mask.nick, True)
+            self.__db_add(['groups', 'playergroups', groupname, 'players'], mask.nick, True)
         elif leave:
             if not players.get(mask.nick):
                 return "You are not in this group."
-            self.__dbDel(['groups', 'playergroups', groupname, 'players'], mask.nick)
+            self.__db_del(['groups', 'playergroups', groupname, 'players'], mask.nick)
         return "Done."
 
     @command(permission='admin', public=False, show_in_help_list=False)
@@ -691,10 +691,10 @@ class Plugin(object):
         """
         if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
-        get, add, delete, join, leave, groupname, playername, text = args.get('get'), args.get('add'), args.get(
+        get, add, delete, join, leave, group_name, playe_rname, text = args.get('get'), args.get('add'), args.get(
             'del'), args.get('join'), args.get('leave'), args.get('<groupname>'), args.get('<playername>'), " ".join(
             args.get('TEXT'))
-        player_groups = self.__dbGet(['groups', 'playergroups'])
+        player_groups = self.__db_get(['groups', 'playergroups'])
         if get:
             self.bot.privmsg(mask.nick, str(len(player_groups)) + " groups: ")
             for g in player_groups.keys():
@@ -707,23 +707,23 @@ class Plugin(object):
             return
 
         if add:
-            if groupname in player_groups.keys():
-                self.__dbAdd(['groups', 'playergroups', groupname], 'text', text, overwrite_if_exists=True)
+            if group_name in player_groups.keys():
+                self.__db_add(['groups', 'playergroups', group_name], 'text', text, overwrite_if_exists=True)
                 return "Group with that name already exists. The old message was replaced, player list stays."
-            self.__dbAdd(['groups', 'playergroups'], groupname, {'text': text, 'players': {}})
+            self.__db_add(['groups', 'playergroups'], group_name, {'text': text, 'players': {}})
             return "Done."
 
-        if not player_groups.get(groupname):
+        if not player_groups.get(group_name):
             return "Group does not exist."
-        players = player_groups[groupname].get('players', {})
+        players = player_groups[group_name].get('players', {})
         if delete:
-            self.__dbDel(['groups', 'playergroups'], groupname)
+            self.__db_del(['groups', 'playergroups'], group_name)
         elif join:
-            self.__dbAdd(['groups', 'playergroups', groupname, 'players'], playername, True)
+            self.__db_add(['groups', 'playergroups', group_name, 'players'], playe_rname, True)
         elif leave:
-            if not players.get(playername):
+            if not players.get(playe_rname):
                 return "The player is not in this group."
-            self.__dbDel(['groups', 'playergroups', groupname, 'players'], playername)
+            self.__db_del(['groups', 'playergroups', group_name, 'players'], playe_rname)
         return "Done."
 
     @command(permission='admin', public=False, show_in_help_list=False)
@@ -739,17 +739,17 @@ class Plugin(object):
             return
         add, delete, get, user = args.get('add'), args.get('del'), args.get('get'), " ".join(args.get('USER'))
         if get:
-            for user in self.__dbGet(['blacklist', 'users']).keys():
+            for user in self.__db_get(['blacklist', 'users']).keys():
                 self.bot.privmsg(mask.nick, '- ' + user)
             return
         if user is not None:
-            users = self.__dbGet(['blacklist', 'users'])
+            users = self.__db_get(['blacklist', 'users'])
             if add:
-                self.__dbAdd(['blacklist', 'users'], user, True)
+                self.__db_add(['blacklist', 'users'], user, True)
                 return "Added {} to blacklist".format(user)
             if delete:
                 if users.get(user):
-                    self.__dbDel(['blacklist', 'users'], user)
+                    self.__db_del(['blacklist', 'users'], user)
                     return "Removed {} from the blacklist".format(user)
                 return "{} is not on the blacklist.".format(user)
         return "Something went wrong."
@@ -771,7 +771,7 @@ class Plugin(object):
         if add:
             try:
                 word = word.lower()
-                BAD_WORDS, _, _ = self.__dbAdd(['badwords', 'words'], word, int(gravity), True)
+                BAD_WORDS, _, _ = self.__db_add(['badwords', 'words'], word, int(gravity), True)
                 return 'Added "{word}" to watched badwords with gravity {gravity}'.format(**{
                     "word": word,
                     "gravity": gravity,
@@ -780,7 +780,7 @@ class Plugin(object):
                 return "Failed adding the word. Did you not use a number for the gravity?"
         elif delete:
             if BAD_WORDS.get(word):
-                BAD_WORDS = self.__dbDel(['badwords', 'words'], word)
+                BAD_WORDS = self.__db_del(['badwords', 'words'], word)
                 return 'Removed "{word}" from watched badwords'.format(**{
                     "word": word,
                 })
@@ -820,7 +820,7 @@ class Plugin(object):
             args.get('REPLY'))
         if add:
             try:
-                REACTION_WORDS, _, _ = self.__dbAdd(['reactionwords', 'words'], word.lower(), reply)
+                REACTION_WORDS, _, _ = self.__db_add(['reactionwords', 'words'], word.lower(), reply)
                 return 'Added "{word}" to watched reactionwords with reply: "{reply}"'.format(**{
                     "word": word,
                     "reply": reply,
@@ -828,16 +828,16 @@ class Plugin(object):
             except Exception as ex:
                 return "Failed adding the word."
         elif delete:
-            words = self.__dbGet(['reactionwords', 'words'])
+            words = self.__db_get(['reactionwords', 'words'])
             if words.get(word):
-                REACTION_WORDS = self.__dbDel(['reactionwords', 'words'], word)
+                REACTION_WORDS = self.__db_del(['reactionwords', 'words'], word)
                 return 'Removed "{word}" from watched reactionwords'.format(**{
                     "word": word,
                 })
             else:
                 return 'Word not found in the list.'
         elif get:
-            words = self.__dbGet(['reactionwords', 'words'])
+            words = self.__db_get(['reactionwords', 'words'])
             self.bot.privmsg(mask.nick, str(len(words)) + " checked reactionwords:")
             for word in words.keys():
                 self.bot.privmsg(mask.nick, '- word: "%s", reply: %s' % (word, words[word]))
@@ -858,7 +858,7 @@ class Plugin(object):
         add, delete, get, id_player, seconds, channel, words = args.get('add'), args.get('del'), args.get(
             'get'), args.get(
             '<ID>'), args.get('<seconds>'), args.get('<channel>'), " ".join(args.get('WORDS'))
-        text = self.__dbGet(['repetitions', 'text'])
+        text = self.__db_get(['repetitions', 'text'])
         if get:
             self.bot.privmsg(mask.nick, str(len(text)) + " texts repeating:")
             for t in text.keys():
@@ -868,7 +868,7 @@ class Plugin(object):
             try:
                 if text.get(id_player):
                     return "ID already exists. Pick another."
-                self.__dbAdd(['repetitions', 'text'], id_player, {
+                self.__db_add(['repetitions', 'text'], id_player, {
                     "seconds": int(seconds),
                     "text": words,
                     "channel": channel,
@@ -882,7 +882,7 @@ class Plugin(object):
         elif delete:
             try:
                 if text.get(id_player):
-                    self.__dbDel(['repetitions', 'text'], id_player)
+                    self.__db_del(['repetitions', 'text'], id_player)
                     REPETITIONS[id_player].stop()
                     del REPETITIONS[id_player]
                     return 'Done.'
@@ -906,7 +906,7 @@ class Plugin(object):
 
     @command(permission='chatlist', show_in_help_list=False)
     @asyncio.coroutine
-    def chatlist(self, mask, target, args):
+    def chat_list(self, mask, target, args):
         """Chat lists
 
             %%chatlist
@@ -919,17 +919,17 @@ class Plugin(object):
         channel, user, add, remove = args.get('<channel>'), args.get('<user>'), args.get('add'), args.get('del')
         if not add and not remove:
             if not channel:
-                self.bot.privmsg(mask.nick, ", ".join(self.__dbGet(['chatlists'])))
+                self.bot.privmsg(mask.nick, ", ".join(self.__db_get(['chatlists'])))
             else:
-                self.bot.privmsg(mask.nick, ", ".join(self.__dbGet(['chatlists', channel]).keys()))
+                self.bot.privmsg(mask.nick, ", ".join(self.__db_get(['chatlists', channel]).keys()))
         elif add:
-            self.__dbAdd(['chatlists', channel], user, True)
+            self.__db_add(['chatlists', channel], user, True)
             self.move_user(channel, user)
             self.bot.privmsg(mask.nick, "OK added and moved %s to %s" % (user, channel))
         elif remove:
-            remaining = self.__dbDel(['chatlists', channel], user)
+            remaining = self.__db_del(['chatlists', channel], user)
             if len(remaining) == 0:
-                self.__dbDel(['chatlists'], channel)
+                self.__db_del(['chatlists'], channel)
             self.bot.privmsg(mask.nick, "OK removed %s from %s" % (user, channel))
 
     @command
@@ -999,11 +999,10 @@ class Plugin(object):
         if gravity >= self.bot.config['report_to_slack_threshold']:
             self.slackThread.send_message_to_channel(self.bot.config['report_to_slack_channel'], report_msg)
         if gravity >= self.bot.config['report_instant_kick_threshold']:
-            self._taunt(channel=channel, prefix=name, tauntTable=KICK_TAUNTS)
+            self._taunt(channel=channel, prefix=name, taunt_table=KICK_TAUNTS)
             self.bot.privmsg(channel, "!kick {}".format(name))
 
-
-    def __dbAdd(self, path, key, value, overwrite_if_exists=True, try_saving_with_new_key=False):
+    def __db_add(self, path, key, value, overwrite_if_exists=True, try_saving_with_new_key=False):
         cur = self.bot.db
         for p in path:
             if p not in cur:
@@ -1020,23 +1019,23 @@ class Plugin(object):
                     cur[key + str(i)] = value
                     added_with_new_key = True
                     break
-        self.__dbSave()
+        self.__db_save()
         return cur, exists, added_with_new_key
 
-    def __dbDel(self, path, key):
+    def __db_del(self, path, key):
         cur = self.bot.db
         for p in path:
             cur = cur.get(p, {})
         if not cur.get(key) is None:
             del cur[key]
-            self.__dbSave()
+            self.__db_save()
         return cur
 
-    def __dbGet(self, path):
+    def __db_get(self, path):
         reply = self.bot.db
         for p in path:
             reply = reply.get(p, {})
         return reply
 
-    def __dbSave(self):
+    def __db_save(self):
         self.bot.db.set('misc', lastSaved=time.time())

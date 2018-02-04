@@ -9,9 +9,9 @@ API_KEY = ""
 API_LINK = ""
 
 
-def set_challonge_data(username, apikey):
+def set_challonge_data(username, api_key):
     global USER, API_KEY, API_LINK
-    USER, API_KEY, API_LINK = username, apikey, "https://" + username + ":" + apikey + "@api.challonge.com/v1/"
+    USER, API_KEY, API_LINK = username, api_key, "https://" + username + ":" + api_key + "@api.challonge.com/v1/"
 
 # http://api.challonge.com/v1
 # ----------------------------------------------
@@ -22,7 +22,7 @@ def get_faf_default_settings():
     return {
         "name": "Blitz tournament",
         "description": "Automatically generated tournament",
-        "tournament_type" : "single elimination",
+        "tournament_type": "single elimination",
         # "single elimination",
         # "double elimination",
         # "round robin", "swiss"
@@ -40,7 +40,6 @@ def __build_json_params(params, prefix=None):
             p["%s[%s]" % (prefix, key)] = params[key]
         else:
             p[key] = params[key]
-
     return p
 
 # ----------------------------------------------
@@ -51,7 +50,7 @@ def tourney_list():
     req = yield from aiohttp.request('GET', API_LINK + "tournaments.json")
     try:
         return json.loads((yield from req.read()).decode())
-    except:
+    except Exception as ex:
         return []
 
 
@@ -63,7 +62,7 @@ def get_tourney_by_link(link):
         if tourney.get("error", False):
             return None
         return tourney
-    except:
+    except Exception as ex:
         return None
 
 

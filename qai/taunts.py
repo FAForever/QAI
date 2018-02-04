@@ -4,11 +4,13 @@ TAUNTS = [
     "I will not allow you to jeopardize my mission by finishing that experimental.",
     "Your experimental unit may actually be dangerous if completed. Ergo, I will destroy it now.",
     "My \"guests\" will soon be under my command.",
-    "It is unfortunate that I was unable to extract the desired information from my guests. There will be other opportunities.",
+    "It is unfortunate that I was unable to extract the desired information from my guests. \
+    There will be other opportunities.",
     "You have no chance of defeating the Seraphim.",
     "The attack on Fort Clarke was only the beginning. You will be erased from existence.",
     "All Symbionts will soon call me Master.",
-    "I have witnessed the truth and beauty of the Seraphim. They are the true gods, and you are a fool for abandoning them.",
+    "I have witnessed the truth and beauty of the Seraphim. They are the true gods, \
+    and you are a fool for abandoning them.",
     "If you destroy this ACU, another shall rise in its place. I am endless.",
     "Hex5 was but a pawn.",
     "Those bases are of no consequence.",
@@ -34,7 +36,8 @@ SPAM_PROTECT_TAUNTS = [
     "All calculations indicate that your demise is near.",
     "Why did you turn your back on your heritage, your people?",
     "Another commander will not make a difference. You will never defeat me.",
-    "I have examined our previous battles and created the appropriate subroutines to counter your strategies. You cannot win.",
+    "I have examined our previous battles and created the appropriate subroutines to counter your strategies. \
+    You cannot win.",
     "If your beloved Dr. Brackman could not control me, what chance do you have?",
     "Your puny intelligence cannot hope to compete against my subroutines. I know your every move, surrender.",
     "I have enough power to defeat hundreds like you simultaneously.",
