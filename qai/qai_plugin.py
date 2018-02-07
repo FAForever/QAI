@@ -583,13 +583,13 @@ class Plugin(object):
             return True
         return False
 
-    def __filter_for_players_in_channel(self, playerlist, channelname):
+    def __filter_for_players_in_channel(self, player_list, channel_name):
         players = {}
         # TODO CHECK 'not var in' vs 'var not in'
-        if channelname not in self.bot.channels:
+        if channel_name not in self.bot.channels:
             return players
-        channel = self.bot.channels[channelname]
-        for p in playerlist.keys():
+        channel = self.bot.channels[channel_name]
+        for p in player_list.keys():
             if self.__is_in_channel(p, channel):
                 players[p] = True
         return players
@@ -652,7 +652,7 @@ class Plugin(object):
         """
         if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
-        get, join, leave, groupname = args.get('get'), args.get('join'), args.get('leave'), args.get('<groupname>')
+        get, join, leave, group_name = args.get('get'), args.get('join'), args.get('leave'), args.get('<groupname>')
         player_groups = self.__db_get(['groups', 'playergroups'])
         if get:
             self.bot.privmsg(mask.nick, str(len(player_groups)) + " groups: ")
@@ -667,15 +667,15 @@ class Plugin(object):
                     "ismember": is_member,
                 }))
             return
-        if not player_groups.get(groupname):
+        if not player_groups.get(group_name):
             return "Group does not exist."
-        players = player_groups[groupname].get('players', {})
+        players = player_groups[group_name].get('players', {})
         if join:
-            self.__db_add(['groups', 'playergroups', groupname, 'players'], mask.nick, True)
+            self.__db_add(['groups', 'playergroups', group_name, 'players'], mask.nick, True)
         elif leave:
             if not players.get(mask.nick):
                 return "You are not in this group."
-            self.__db_del(['groups', 'playergroups', groupname, 'players'], mask.nick)
+            self.__db_del(['groups', 'playergroups', group_name, 'players'], mask.nick)
         return "Done."
 
     @command(permission='admin', public=False, show_in_help_list=False)
@@ -691,7 +691,7 @@ class Plugin(object):
         """
         if not (yield from self.__is_nick_serv_identified(mask.nick)):
             return
-        get, add, delete, join, leave, group_name, playe_rname, text = args.get('get'), args.get('add'), args.get(
+        get, add, delete, join, leave, group_name, player_name, text = args.get('get'), args.get('add'), args.get(
             'del'), args.get('join'), args.get('leave'), args.get('<groupname>'), args.get('<playername>'), " ".join(
             args.get('TEXT'))
         player_groups = self.__db_get(['groups', 'playergroups'])
@@ -719,11 +719,11 @@ class Plugin(object):
         if delete:
             self.__db_del(['groups', 'playergroups'], group_name)
         elif join:
-            self.__db_add(['groups', 'playergroups', group_name, 'players'], playe_rname, True)
+            self.__db_add(['groups', 'playergroups', group_name, 'players'], player_name, True)
         elif leave:
-            if not players.get(playe_rname):
+            if not players.get(player_name):
                 return "The player is not in this group."
-            self.__db_del(['groups', 'playergroups', group_name, 'players'], playe_rname)
+            self.__db_del(['groups', 'playergroups', group_name, 'players'], player_name)
         return "Done."
 
     @command(permission='admin', public=False, show_in_help_list=False)

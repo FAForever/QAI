@@ -2,6 +2,7 @@ import json
 import threading
 import time
 from slackclient import SlackClient
+from slackclient.server import SlackLoginError
 
 
 class SlackThread(threading.Thread):
@@ -20,7 +21,10 @@ class SlackThread(threading.Thread):
 
     def run(self):
         works = True
-        self.CON = self.SC.rtm_connect()
+        try:
+            self.CON = self.SC.rtm_connect()
+        except SlackLoginError as ex:
+            print('Slack login error: ' + ex.reply)
         if not self.CON:
             print('Failed starting a Slack RTM session.')
             works = False
@@ -39,7 +43,10 @@ class SlackThread(threading.Thread):
             for event in self.SC.rtm_read():
                 try:
                     self.handledEvents[event['type']](event)
+                except SlackLoginError as ex:
+                    print('Slack login error: ' + ex.reply)
                 except Exception as ex:
+                    print('TODO: Better exception handling.')
                     # print(event)
                     pass
             count_for_ping += 0.1
@@ -52,8 +59,10 @@ class SlackThread(threading.Thread):
         self.lock.acquire()
         # test = False
         try:
-            test = json.loads((self.SC.api_call("api.test")).decode())
-        except Exception as ex:
+            tmp_val = self.SC.api_call("api.test")
+            test = json.loads(tmp_val.decode())
+        except AttributeError as ex:
+            print('TODO: Better exception handling. \n\t')
             return False
         if not test.get('ok'):
             print('API Test failed. Full response:')
