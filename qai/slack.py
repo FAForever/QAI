@@ -23,8 +23,10 @@ class SlackThread(threading.Thread):
         works = True
         try:
             self.CON = self.SC.rtm_connect()
+            # print("TODO: Check if 'SlackLoginError' can be caught.")
         except SlackLoginError as ex:
-            print('Slack login error: ' + ex.reply)
+            # print('Slack login error: ' + ex.reply)
+            pass
         if not self.CON:
             print('Failed starting a Slack RTM session.')
             works = False
@@ -38,6 +40,9 @@ class SlackThread(threading.Thread):
             print('Slack connection not established')
             return
 
+        if not works:
+            return
+
         count_for_ping = 0
         while True:
             for event in self.SC.rtm_read():
@@ -46,7 +51,7 @@ class SlackThread(threading.Thread):
                 except SlackLoginError as ex:
                     print('Slack login error: ' + ex.reply)
                 except Exception as ex:
-                    print('TODO: Better exception handling.')
+                    # print('TODO: Check for Slack errors with rtm_read().\n' + ex.args)
                     # print(event)
                     pass
             count_for_ping += 0.1
@@ -57,13 +62,15 @@ class SlackThread(threading.Thread):
 
     def rebuild_data(self):
         self.lock.acquire()
-        # test = False
+        test = None
         try:
             tmp_val = self.SC.api_call("api.test")
+            print(tmp_val)
             test = json.loads(tmp_val.decode())
         except AttributeError as ex:
-            print('TODO: Better exception handling. \n\t')
+            print('AttributeError: api_call \'api.test\' failed. \n' + ex.args)
             return False
+
         if not test.get('ok'):
             print('API Test failed. Full response:')
             print(test)

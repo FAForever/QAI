@@ -12,7 +12,7 @@ import time
 from urllib.parse import urlparse, parse_qs
 import threading
 
-from qai import repetition, slack, challonge
+from qai import repetition, challonge, slack
 from qai.taunts import TAUNTS, SPAM_PROTECT_TAUNTS, KICK_TAUNTS
 from qai.links import LINKS, LINKS_SYNONYMES, WIKI_LINKS, WIKI_LINKS_SYNONYMES, OTHER_LINKS
 
