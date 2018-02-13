@@ -19,14 +19,11 @@ LINKS = {
 
     "wwpc":         "World Wide People's Championship: http://forums.faforever.com/viewtopic.php?f=26&t=13780",
 }
-LINKS_SYNONYMES = {
-    "techsupport":  LINKS["support"],
-    "git": LINKS["github"],
-    "whatsnew": LINKS["news"],
-}
 
-LINKS_SYNONYMES["parser"] = LINKS_SYNONYMES["replays"] = LINKS_SYNONYMES["parsereplay"] = LINKS["replayparser"]
-LINKS_SYNONYMES["blog"] = LINKS_SYNONYMES["development"] = LINKS_SYNONYMES["devblog"] = LINKS["dev"]
+LINKS_SYNONYMES = {"techsupport": LINKS["support"], "git": LINKS["github"], "whatsnew": LINKS["news"],
+                   "parser": LINKS["replayparser"], "replays": LINKS["replayparser"],
+                   "parsereplay": LINKS["replayparser"], "blog": LINKS["dev"], "development": LINKS["dev"],
+                   "devblog": LINKS["dev"]}
 
 WIKI_LINKS = {
     "AI":                "Guide to AI modding: http://wiki.faforever.com/index.php?title=AI_Modding",
@@ -61,6 +58,7 @@ WIKI_LINKS = {
     "tutorials":         "Help with learning how to play: http://wiki.faforever.com/index.php?title=Learning_SupCom",
     "adaptivemap":        "Learn more about the adaptive maps from the Ultimate series http://wiki.faforever.com/index.php?title=Adaptive_Maps",
 }
+
 WIKI_LINKS_SYNONYMES = {
     "dev":              WIKI_LINKS["school"],
     "patchnotes":       WIKI_LINKS["patches"],

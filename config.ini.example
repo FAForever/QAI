@@ -8,10 +8,10 @@ port = 6667
 
 includes =
     irc3.plugins.command
-    qai_plugin
-    #irc3.plugins.storage
+    qai.qai_plugin
+    irc3.plugins.storage
 
-#storage = json://db.json
+storage = json://db.json
 
 autojoins =
     qai_channel

@@ -1,4 +1,4 @@
-from taunts import TAUNTS, SPAM_PROTECT_TAUNTS, KICK_TAUNTS
+from qai.taunts import TAUNTS, SPAM_PROTECT_TAUNTS, KICK_TAUNTS
 
 
 def test_existance():
