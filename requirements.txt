@@ -1,4 +1,1 @@
-aiohttp==2.3.9
-irc3==1.0.2
-pytest==3.3.2
-slackclient==1.1.0
+pipenv==2018.7.1
