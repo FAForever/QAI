@@ -25,7 +25,7 @@ NICK_SERV_IDENTIFIED_RESPONSES = {}
 NICK_SERV_IDENTIFIED_RESPONSES_LOCK = None
 MAIN_CHANNEL = "#aeolus"
 TWITCH_API_LOGIN = "https://api.twitch.tv/kraken/users/"
-TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+Forged+Alliance" # add the game name at the end of the link (space = "+", eg: Game+Name)
+TWITCH_STREAMS = "https://api.twitch.tv/kraken/streams/?game=Supreme+Commander:+Forged+Alliance"  # add the game name at the end of the link (space = "+", eg: Game+Name)
 HIT_BOX_STREAMS = "https://api.hitbox.tv/media/live/list?filter=popular&game=811&hiddenOnly=false&limit=30&liveonly=true&media=true"
 YOUTUBE_NON_API_SEARCH_LINK = "https://www.youtube.com/results?search_query=supreme+commander+%7C+forged+alliance&search_sort=video_date_uploaded&filters=video"
 YOUTUBE_SEARCH = "https://www.googleapis.com/youtube/v3/search?order=date&type=video&part=snippet&q=Forged%2BAlliance|Supreme%2BCommander&relevanceLanguage=en&maxResults=15&key={}"
@@ -107,8 +107,7 @@ class Plugin(object):
         self.bot.privmsg('OperServ', 'svsjoin %s %s' % (nick, channel))
 
     @irc3.event(irc3.rfc.PRIVMSG)
-    @asyncio.coroutine
-    def on_priv_msg(self, *args, **kwargs):
+    async def on_priv_msg(self, *args, **kwargs):
         msg, channel, sender = kwargs['data'], kwargs['target'], kwargs['mask']
         if self.bot.config['nick'] in sender.nick:
             return
@@ -117,8 +116,8 @@ class Plugin(object):
             uri = urlparse(link_url)
             ytid = parse_qs(uri.query).get('v', '')[0]
             if len(ytid) > 0:
-                req = yield from aiohttp.request('GET', YOUTUBE_DETAIL.format(ytid, self.bot.config['youtube_key']))
-                data = json.loads((yield from req.read()).decode())['items'][0]
+                async with aiohttp.request('GET', YOUTUBE_DETAIL.format(ytid, self.bot.config['youtube_key'])) as req:
+                    data = json.loads((await req.read()).decode())['items'][0]
 
                 self.bot.privmsg(channel, "{title} - {views} views - {likes} likes (Linked above by {sender})".format(
                     title=data['snippet']['title'],
@@ -155,8 +154,7 @@ class Plugin(object):
             self.__handle_nick_serv_message(msg)
 
     @command(permission='admin', public=False)
-    @asyncio.coroutine
-    def hidden(self, mask, target, args):
+    async def hidden(self, mask, target, args):
         """Actually shows hidden commands
 
             %%hidden
@@ -168,14 +166,13 @@ class Plugin(object):
             self.bot.privmsg(mask.nick, "- " + word)
 
     @command(permission='admin')
-    @asyncio.coroutine
-    def taunt(self, mask, target, args):
+    async def taunt(self, mask, target, args):
         """Send a taunt
 
             %%taunt
             %%taunt <person>
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         p = args.get('<person>')
         if p == self.bot.config['nick']:
@@ -183,25 +180,23 @@ class Plugin(object):
         self._taunt(channel=target, prefix=p, taunt_table=TAUNTS)
 
     @command(permission='admin')
-    @asyncio.coroutine
-    def explode(self, mask, target, args):
+    async def explode(self, mask, target, args):
         """Explode
 
             %%explode
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         self.bot.action(target, "explodes")
 
     @command(permission='admin')
-    @asyncio.coroutine
-    def hug(self, mask, target, args):
+    async def hug(self, mask, target, args):
         """Hug someone
 
             %%hug
             %%hug <someone>
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         someone = args['<someone>']
         if someone is None:
@@ -212,36 +207,33 @@ class Plugin(object):
         self.bot.action(target, "hugs " + someone)
 
     @command(permission='admin')
-    @asyncio.coroutine
-    def flip(self, mask, target, args):
+    async def flip(self, mask, target, args):
         """Flip table
 
             %%flip
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         self.bot.privmsg(target, "(╯°□°）╯︵ ┻━┻")
 
     @command(permission='admin', show_in_help_list=False)
-    @asyncio.coroutine
-    def join(self, mask, target, args):
+    async def join(self, mask, target, args):
         """Overtake the given channel
 
             %%join <channel>
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         self.bot.join(args['<channel>'])
 
     @command(permission='admin', show_in_help_list=False)
-    @asyncio.coroutine
-    def leave(self, mask, target, args):
+    async def leave(self, mask, target, args):
         """Leave the given channel
 
             %%leave
             %%leave <channel>
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         channel = args['<channel>']
         if channel is None:
@@ -314,13 +306,12 @@ class Plugin(object):
             self.bot.privmsg(target, msg)
 
     @command(public=False)
-    @asyncio.coroutine
-    def offline_message(self, mask, target, args):
+    async def offline_message(self, mask, target, args):
         """Store an offline message, it is delivered once the person logs on
 
             %%offlinemessage <playername> WORDS ...
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         player_name, message = args.get('<playername>'), " ".join(args.get('WORDS'))
         if mask.nick == player_name:
@@ -337,26 +328,24 @@ class Plugin(object):
                          "The message is saved and will be delivered once " + player_name + " is online again.")
 
     @command(permission='admin', public=False, show_in_help_list=False)
-    @asyncio.coroutine
-    def puppet(self, mask, target, args):
+    async def puppet(self, mask, target, args):
         """Puppet
 
             %%puppet <target> WORDS ...
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         t = args.get('<target>')
         m = " ".join(args.get('WORDS'))
         self.bot.privmsg(t, m)
 
     @command(permission='admin', public=False, show_in_help_list=False)
-    @asyncio.coroutine
-    def mode(self, mask, target, args):
+    async def mode(self, mask, target, args):
         """mode
 
             %%mode <channel> <mode> <nick>
         """
-        # if not (yield from self.__isNickservIdentified(mask.nick)):
+        # if not (await self.__isNickservIdentified(mask.nick)):
         #    return
         self.bot.send_line('MODE {} {} {}'.format(
             args.get('<channel>'),
@@ -365,24 +354,22 @@ class Plugin(object):
         ), nowait=True)
 
     @command(permission='admin', public=False, show_in_help_list=False)
-    @asyncio.coroutine
-    def reload(self, mask, target, args):
+    async def reload(self, mask, target, args):
         """Reboot the mainframe
 
             %%reload
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         self.bot.reload(self.bot.config['nick'])
 
     @command(permission='admin')
-    @asyncio.coroutine
-    def slap(self, mask, target, args):
+    async def slap(self, mask, target, args):
         """Slap this guy
 
             %%slap <guy>
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         self.bot.action(target, "slaps %s " % args['<guy>'])
 
@@ -412,10 +399,9 @@ class Plugin(object):
                     del OFFLINE_MESSAGE_RECEIVERS[receiver]
                     self.__db_del(['offlinemessages'], receiver)
 
-    @asyncio.coroutine
-    def hitbox_streams(self):
-        req = yield from aiohttp.request('GET', HIT_BOX_STREAMS)
-        data = yield from req.read()
+    async def hitbox_streams(self):
+        async with aiohttp.request('GET', HIT_BOX_STREAMS) as req:
+            data = await req.read()
         try:
             data = json.loads(data.decode())
             hitbox_streams = data.get('livestreams', None)
@@ -436,11 +422,10 @@ class Plugin(object):
         except (KeyError, ValueError):
             return []
 
-    @asyncio.coroutine
-    def twitch_streams(self):
-        req = yield from aiohttp.request('GET', TWITCH_STREAMS,
-                                         headers={'Client-ID': self.bot.config['twitch_client_id']})
-        data = yield from req.read()
+    async def twitch_streams(self):
+        async with aiohttp.request('GET', TWITCH_STREAMS,
+                                   headers={'Client-ID': self.bot.config['twitch_client_id']}) as req:
+            data = await req.read()
         try:
             livestreams = []
             for stream in json.loads(data.decode())['streams']:
@@ -460,10 +445,9 @@ class Plugin(object):
         except (KeyError, ValueError):
             return []
 
-    @asyncio.coroutine
-    def youtube_streams(self):
-        req = yield from aiohttp.request('GET', YOUTUBE_STREAMS.format(self.bot.config['youtube_key']))
-        data = yield from req.read()
+    async def youtube_streams(self):
+        async with aiohttp.request('GET', YOUTUBE_STREAMS.format(self.bot.config['youtube_key'])) as req:
+            data = await req.read()
         try:
             live_streams = []
             for stream in json.loads(data.decode())['items']:
@@ -484,17 +468,15 @@ class Plugin(object):
             return []
 
     @command
-    @asyncio.coroutine
-    def casts(self, mask, target, args):
+    async def casts(self, mask, target, args):
         """List recent casts
 
             %%casts
         """
         if self.spam_protect('casts', mask, target, args):
             return
-        req = yield from aiohttp.request('GET', YOUTUBE_SEARCH.format(self.bot.config['youtube_key']))
-        data = json.loads((yield from req.read()).decode())
-
+        async with aiohttp.request('GET', YOUTUBE_SEARCH.format(self.bot.config['youtube_key'])) as req:
+            data = json.loads((await req.read()).decode())
         casts = []
         try:
             for item in itertools.takewhile(lambda _: len(casts) < 5, data['items']):
@@ -515,7 +497,7 @@ class Plugin(object):
                                                                                         'youtube_time_fmt'])),
                                                 "link": "http://youtu.be/{}".format(item['id']['videoId'])
                                             }))
-                    except (KeyError, ValueError):
+                    except (KeyError, ValueError) as ex:
                         pass
         except KeyError:
             pass
@@ -554,8 +536,7 @@ class Plugin(object):
             NICK_SERV_IDENTIFIED_RESPONSES[words[1]] = words[2]
             NICK_SERV_IDENTIFIED_RESPONSES_LOCK.release()
 
-    @asyncio.coroutine
-    def __is_nick_serv_identified(self, nick):
+    async def __is_nick_serv_identified(self, nick):
         self.bot.privmsg('nickserv', "status {}".format(nick))
         remaining_tries = 20
         while remaining_tries > 0:
@@ -568,7 +549,7 @@ class Plugin(object):
                     return True
                 return False
             remaining_tries -= 1
-            yield from asyncio.sleep(0.1)
+            await asyncio.sleep(0.1)
         return False
 
     def __is_in_bot_channel(self, player):
@@ -595,17 +576,16 @@ class Plugin(object):
         return players
 
     @command
-    @asyncio.coroutine
-    def streams(self, mask, target, args):
+    async def streams(self, mask, target, args):
         """List current live streams
 
             %%streams
         """
         if self.spam_protect('streams', mask, target, args):
             return
-        streams = yield from self.hitbox_streams()
-        streams.extend((yield from self.twitch_streams()))
-        streams.extend((yield from self.youtube_streams()))
+        streams = await self.hitbox_streams()
+        streams.extend((await self.twitch_streams()))
+        streams.extend((await self.youtube_streams()))
         blacklist = self.__db_get(['blacklist', 'users'])
         for stream in streams:
             if stream["channel"] in blacklist:
@@ -619,13 +599,12 @@ class Plugin(object):
             self.bot.privmsg(target, "Nobody is streaming :'(")
 
     @command
-    @asyncio.coroutine
-    def groupping(self, mask, target, args):
+    async def groupping(self, mask, target, args):
         """Pings people in this group
 
             %%groupping <groupname>
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         group_name = args.get('<groupname>')
         player_groups = self.__db_get(['groups', 'playergroups'])
@@ -642,15 +621,14 @@ class Plugin(object):
         self.bot.privmsg(target, ", ".join(player_list))
 
     @command(public=False)
-    @asyncio.coroutine
-    def group(self, mask, target, args):
+    async def group(self, mask, target, args):
         """Allows joining and leaving ping groups
 
             %%group get
             %%group join <groupname>
             %%group leave <groupname>
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         get, join, leave, group_name = args.get('get'), args.get('join'), args.get('leave'), args.get('<groupname>')
         player_groups = self.__db_get(['groups', 'playergroups'])
@@ -679,8 +657,7 @@ class Plugin(object):
         return "Done."
 
     @command(permission='admin', public=False, show_in_help_list=False)
-    @asyncio.coroutine
-    def group_manage(self, mask, target, args):
+    async def group_manage(self, mask, target, args):
         """Allows admins to manage groups
 
             %%groupmanage get
@@ -689,7 +666,7 @@ class Plugin(object):
             %%groupmanage join <groupname> <playername>
             %%groupmanage leave <groupname> <playername>
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         get, add, delete, join, leave, group_name, player_name, text = args.get('get'), args.get('add'), args.get(
             'del'), args.get('join'), args.get('leave'), args.get('<groupname>'), args.get('<playername>'), " ".join(
@@ -727,15 +704,14 @@ class Plugin(object):
         return "Done."
 
     @command(permission='admin', public=False, show_in_help_list=False)
-    @asyncio.coroutine
-    def blacklist(self, mask, target, args):
+    async def blacklist(self, mask, target, args):
         """Blacklist given channel/user from !casts, !streams
 
             %%blacklist get
             %%blacklist add USER ...
             %%blacklist del USER ...
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         add, delete, get, user = args.get('add'), args.get('del'), args.get('get'), " ".join(args.get('USER'))
         if get:
@@ -755,15 +731,14 @@ class Plugin(object):
         return "Something went wrong."
 
     @command(permission='admin', public=False, show_in_help_list=False)
-    @asyncio.coroutine
-    def bad_words(self, mask, target, args):
-        """Adds/removes a given keyword from the checklist 
+    async def bad_words(self, mask, target, args):
+        """Adds/removes a given keyword from the checklist
 
             %%badwords get
             %%badwords add <word> <gravity>
             %%badwords del <word>
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         global BAD_WORDS
         add, delete, get, word, gravity = args.get('add'), args.get('del'), args.get('get'), args.get(
@@ -793,8 +768,7 @@ class Plugin(object):
                 self.bot.privmsg(mask.nick, '- word: "%s", gravity: %s' % (word, words[word]))
 
     @command
-    @asyncio.coroutine
-    def rwords(self, mask, target, args):
+    async def rwords(self, mask, target, args):
         """Prints the list of checked reactionwords
 
             %%rwords
@@ -804,8 +778,7 @@ class Plugin(object):
         self.bot.privmsg(target, "Checked reaction words: " + ", ".join(REACTION_WORDS.keys()))
 
     @command(permission='admin', public=False, show_in_help_list=False)
-    @asyncio.coroutine
-    def reaction_words(self, mask, target, args):
+    async def reaction_words(self, mask, target, args):
         """Adds/removes a given keyword from the checklist.
         "{sender}" in the reply text will be replaced by the name of the person who triggered the response.
 
@@ -813,7 +786,7 @@ class Plugin(object):
             %%reactionwords add <word> REPLY ...
             %%reactionwords del <word>
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         global REACTION_WORDS
         add, delete, get, word, reply = args.get('add'), args.get('del'), args.get('get'), args.get('<word>'), " ".join(
@@ -843,15 +816,14 @@ class Plugin(object):
                 self.bot.privmsg(mask.nick, '- word: "%s", reply: %s' % (word, words[word]))
 
     @command(permission='admin', public=False, show_in_help_list=False)
-    @asyncio.coroutine
-    def repeat(self, mask, target, args):
+    async def repeat(self, mask, target, args):
         """Makes QAI repeat WORDS in <channel> each <seconds>. Use <ID> to remove them again.
 
             %%repeat get
             %%repeat add <ID> <seconds> <channel> WORDS ...
             %%repeat del <ID>
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         global REPETITIONS
         # TODO Check if id_player could be named better and if words works in lowercase.
@@ -877,7 +849,7 @@ class Plugin(object):
                 REPETITIONS[id_player].daemon = True
                 REPETITIONS[id_player].start()
                 return 'Done.'
-            except:
+            except Exception as ex:
                 return "Failed adding the text."
         elif delete:
             try:
@@ -892,21 +864,19 @@ class Plugin(object):
                 return "Failed deleting."
 
     @command(permission='chatlist', show_in_help_list=False)
-    @asyncio.coroutine
-    def move(self, mask, target, args):
+    async def move(self, mask, target, args):
         """Move nick into channel
 
             %%move <nick> <channel>
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         channel, nick = args.get('<channel>'), args.get('<nick>')
         self.move_user(channel, nick)
         self.bot.privmsg(mask.nick, "OK moved %s to %s" % (nick, channel))
 
     @command(permission='chatlist', show_in_help_list=False)
-    @asyncio.coroutine
-    def chat_list(self, mask, target, args):
+    async def chat_list(self, mask, target, args):
         """Chat lists
 
             %%chatlist
@@ -914,7 +884,7 @@ class Plugin(object):
             %%chatlist add <channel> <user>
             %%chatlist del <channel> <user>
         """
-        if not (yield from self.__is_nick_serv_identified(mask.nick)):
+        if not (await self.__is_nick_serv_identified(mask.nick)):
             return
         channel, user, add, remove = args.get('<channel>'), args.get('<user>'), args.get('add'), args.get('del')
         if not add and not remove:
@@ -957,17 +927,15 @@ class Plugin(object):
         self.bot.privmsg(target, link)
 
     @command
-    @asyncio.coroutine
-    def tournaments(self, mask, target, args):
+    async def tournaments(self, mask, target, args):
         """Check tourneys
 
             %%tournaments
         """
-        yield from self.tourneys(mask, target, args)
+        await self.tourneys(mask, target, args)
 
     @command(show_in_help_list=False)
-    @asyncio.coroutine
-    def tourneys(self, mask, target, args):
+    async def tourneys(self, mask, target, args):
         """Check tourneys
 
             %%tourneys
@@ -976,7 +944,7 @@ class Plugin(object):
             return
 
         # TODO Why is got None a problem here?
-        tourneys = yield from challonge.printable_tourney_list()
+        tourneys = await challonge.printable_tourney_list()
         if len(tourneys) < 1:
             self.bot.privmsg(target, "No tourneys found!")
 

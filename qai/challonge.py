@@ -1,6 +1,5 @@
 import json
 import random
-import asyncio
 import aiohttp
 import string
 
@@ -45,20 +44,19 @@ def __build_json_params(params, prefix=None):
 # ----------------------------------------------
 
 
-@asyncio.coroutine
-def tourney_list():
-    req = yield from aiohttp.request('GET', API_LINK + "tournaments.json")
-    try:
-        return json.loads((yield from req.read()).decode())
-    except Exception as ex:
-        return []
+async def tourney_list():
+    async with aiohttp.request('GET', API_LINK + "tournaments.json") as req:
+        try:
+            return json.loads((await req.read()).decode())
+        except Exception as ex:
+            return []
 
 
-@asyncio.coroutine
-def get_tourney_by_link(link):
-    tourney = yield from aiohttp.request('GET', API_LINK + "tournaments/" + link + ".json")
+async def get_tourney_by_link(link):
+    async with aiohttp.request('GET', API_LINK + "tournaments/" + link + ".json") as req:
+        tourney = await req
     try:
-        tourney = json.loads((yield from tourney.read()).decode())
+        tourney = json.loads((await tourney.read()).decode())
         if tourney.get("error", False):
             return None
         return tourney
@@ -66,21 +64,19 @@ def get_tourney_by_link(link):
         return None
 
 
-@asyncio.coroutine
-def get_available_tourney_link():
+async def get_available_tourney_link():
     while True:
         link = 'FAF_'
         for _ in range(10):
             value = string.ascii_uppercase + string.ascii_lowercase + string.digits
             link += ''.join(random.SystemRandom().choice(value))
-        is_available = ((yield from get_tourney_by_link(link)) is None)
+        is_available = ((await get_tourney_by_link(link)) is None)
         if is_available:
             return link
 
 
-@asyncio.coroutine
-def printable_tourney_list():
-    tourneys = yield from tourney_list()
+async def printable_tourney_list():
+    tourneys = await tourney_list()
     tourney_strings = []
 
     for tourney in tourneys:
@@ -99,9 +95,8 @@ def printable_tourney_list():
     return tourney_strings
 
 
-@asyncio.coroutine
-def printable_tourney_list_ids():
-    tourneys = yield from tourney_list()
+async def printable_tourney_list_ids():
+    tourneys = await tourney_list()
     tourney_strings = []
 
     for tourney in tourneys:
@@ -118,9 +113,8 @@ def printable_tourney_list_ids():
     return tourney_strings
 
 
-@asyncio.coroutine
-def create_tourney(args):
-    link = yield from get_available_tourney_link()
+async def create_tourney(args):
+    link = await get_available_tourney_link()
 
     defaults = get_faf_default_settings()
     for arg in args.keys():
@@ -131,6 +125,7 @@ def create_tourney(args):
     j = json.dumps(data)
 
     print(data)
-    response = yield from aiohttp.request('POST', API_LINK + "tournaments.json", data=j)
-    text = json.loads((yield from response.read()).decode())
+    with aiohttp.request('POST', API_LINK + "tournaments.json", data=j) as req:
+        response = await req
+        text = json.loads((await response.read()).decode())
     print(text)
