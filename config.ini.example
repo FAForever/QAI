@@ -20,7 +20,7 @@ nickserv_password = ""
 detectlanguage_api_key = ""
 
 youtube_key = ""
-youtube_time_fmt = ""
+youtube_time_fmt = %Y-%m-%dT%H:%M:%S.%fZ
 
 twitch_client_id = howAboutNo
 
