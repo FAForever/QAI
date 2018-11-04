@@ -1,16 +1,15 @@
-FROM python:3.5
+FROM python:3.6
 
-RUN pip install --upgrade pip
+RUN pip install --upgrade pip==18.0 pipenv==2018.7.1
 RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-COPY requirements.txt /tmp/requirements.txt
-
-RUN pip install --upgrade --trusted-host content.dev.faforever.com -r /tmp/requirements.txt
 
 ADD . /code/
 WORKDIR /code/
 
+RUN pipenv run pip install --upgrade pip==18.0
+RUN pipenv install
+
 VOLUME /config
 
 # irc3 searches for the plugin files in the folder of the configuration file
-CMD cp /config/config.ini ./config.ini && irc3 config.ini
+CMD cp /config/config.ini ./config.ini && pipenv run irc3 config.ini
