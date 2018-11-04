@@ -13,7 +13,7 @@ class RepetitionThread(threading.Thread):
 
     def run(self):
         while not self.is_stopped():
-            self.bot.privmsg(self.channel, self.text)
+            self.bot.privmsg(self.channel, self.text, nowait=True)
             time.sleep(self.seconds)
 
     def stop(self):
