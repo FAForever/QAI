@@ -7,6 +7,7 @@ install:
   - cp config.ini.example config.ini
   - pip install -r requirements.txt
   - pip install pytest-cov python-coveralls
+  - pipenv install
 
 script:
   - py.test tests --cov-report term-missing --cov=. -vv
