@@ -18,12 +18,13 @@ LINKS = {
     "tumblr":       "FAF Reactions on tumblr: http://fafreactions.tumblr.com/",
 
     "wwpc":         "World Wide People's Championship: http://forums.faforever.com/viewtopic.php?f=26&t=13780",
+    "changelog":    "Balance patchnotes: http://content.faforever.com/patchnotes/",
 }
 
 LINKS_SYNONYMES = {"techsupport": LINKS["support"], "git": LINKS["github"], "whatsnew": LINKS["news"],
                    "parser": LINKS["replayparser"], "replays": LINKS["replayparser"],
                    "parsereplay": LINKS["replayparser"], "blog": LINKS["dev"], "development": LINKS["dev"],
-                   "devblog": LINKS["dev"]}
+                   "devblog": LINKS["dev"], "patchnotes": LINKS["changelog"], "balance": LINKS["changelog"]}
 
 WIKI_LINKS = {
     "AI":                "Guide to AI modding: http://wiki.faforever.com/index.php?title=AI_Modding",
@@ -56,7 +57,7 @@ WIKI_LINKS = {
     "trainers":          "List of personal trainers in FAF: http://wiki.faforever.com/index.php?title=User_Groups#Trainers",
     "trueskill":         "Trueskill explained: http://wiki.faforever.com/index.php?title=How_Trueskill_works",
     "tutorials":         "Help with learning how to play: http://wiki.faforever.com/index.php?title=Learning_SupCom",
-    "adaptivemap":        "Learn more about the adaptive maps from the Ultimate series http://wiki.faforever.com/index.php?title=Adaptive_Maps",
+    "adaptivemap":       "Learn more about the adaptive maps from the Ultimate series http://wiki.faforever.com/index.php?title=Adaptive_Maps",
 }
 
 WIKI_LINKS_SYNONYMES = {

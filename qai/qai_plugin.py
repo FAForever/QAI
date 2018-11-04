@@ -6,13 +6,14 @@ import asyncio
 import re
 import aiohttp
 import itertools
-import irc3
-from irc3.plugins.command import command
 import time
+from datetime import datetime, timedelta
 from urllib.parse import urlparse, parse_qs
 import threading
+import irc3
+from irc3.plugins.command import command
 
-from qai import repetition, challonge, slack
+from qai import repetition, challonge, slack, reminder_thread
 from qai.taunts import TAUNTS, SPAM_PROTECT_TAUNTS, KICK_TAUNTS
 from qai.links import LINKS, LINKS_SYNONYMES, WIKI_LINKS, WIKI_LINKS_SYNONYMES, OTHER_LINKS
 
@@ -21,6 +22,7 @@ BAD_WORDS = {}
 REACTION_WORDS = {}
 REPETITIONS = {}
 OFFLINE_MESSAGE_RECEIVERS = {}
+REMINDER_RECEIVERS = {}
 NICK_SERV_IDENTIFIED_RESPONSES = {}
 NICK_SERV_IDENTIFIED_RESPONSES_LOCK = None
 MAIN_CHANNEL = "#aeolus"
@@ -51,15 +53,21 @@ class Plugin(object):
         self.bot = bot
         self.timers = {}
         self._rage = {}
-        global ALL_TAUNTS, NICK_SERV_IDENTIFIED_RESPONSES_LOCK
+        global ALL_TAUNTS, NICK_SERV_IDENTIFIED_RESPONSES_LOCK, REMINDER_DB_ACTION_LOCK
         ALL_TAUNTS.extend(TAUNTS)
         ALL_TAUNTS.extend(SPAM_PROTECT_TAUNTS)
         challonge.set_challonge_data(self.bot.config['challonge_username'], self.bot.config['challonge_api_key'])
         NICK_SERV_IDENTIFIED_RESPONSES_LOCK = threading.Lock()
+        REMINDER_DB_ACTION_LOCK = threading.Lock()
 
         self.slackThread = slack.SlackThread(self.bot.config['slack_api_key'])
         self.slackThread.daemon = True
         self.slackThread.start()
+
+    def start_reminder_thread(self):
+        self.reminder = reminder_thread.ReminderThread(self, self.bot)
+        self.reminder.daemon = True
+        self.reminder.start()
 
     @classmethod
     def reload(cls, old):
@@ -71,7 +79,7 @@ class Plugin(object):
     @irc3.event(irc3.rfc.CONNECTED)
     def nick_serv_auth(self, *args, **kwargs):
         self.bot.privmsg('nickserv', 'identify %s' % self.bot.config['nickserv_password'])
-        global REPETITIONS, BAD_WORDS, REACTION_WORDS, OFFLINE_MESSAGE_RECEIVERS
+        global REPETITIONS, BAD_WORDS, REACTION_WORDS, OFFLINE_MESSAGE_RECEIVERS, REMINDER_RECEIVERS
 
         self.__db_add([], 'chatlists', {}, overwrite_if_exists=False)
         self.__db_add([], 'offlinemessages', {}, overwrite_if_exists=False)
@@ -80,6 +88,7 @@ class Plugin(object):
         self.__db_add(['groups'], 'playergroups', {}, overwrite_if_exists=False)
         self.__db_add(['badwords'], 'words', {}, overwrite_if_exists=False)
         self.__db_add(['reactionwords'], 'words', {}, overwrite_if_exists=False)
+        self.__db_add([], 'reminders', {}, overwrite_if_exists=False)
         BAD_WORDS = self.__db_get(['badwords', 'words'])
         REACTION_WORDS = self.__db_get(['reactionwords', 'words'])
 
@@ -87,12 +96,16 @@ class Plugin(object):
             OFFLINE_MESSAGE_RECEIVERS[r] = True
             self._try_deliver_offline_messages(r)
 
+        for r in self.__db_get(['reminders']).keys():
+            REMINDER_RECEIVERS[r] = True
+
         repetitions = self.__db_get(['repetitions', 'text'])
         for t in repetitions.keys():
             REPETITIONS[t] = repetition.RepetitionThread(self.bot, repetitions[t].get('channel'),
                                                          repetitions[t].get('text'), int(repetitions[t].get('seconds')))
             REPETITIONS[t].daemon = True
             REPETITIONS[t].start()
+        self.start_reminder_thread()
 
     @irc3.event(irc3.rfc.JOIN)
     def on_join(self, channel, mask):
@@ -305,7 +318,57 @@ class Plugin(object):
                 msg += " ?"
             self.bot.privmsg(target, msg)
 
-    @command(public=False)
+    #TODO get rid of mandatory argument order
+    @command
+    async def remind(self, mask, target, args):
+        """Have the bot deliver a message after specified time.
+           Each time argument is optional but must provide at least one.
+           The order of arguments must be preserved.
+           Example: !remind person in 1 hour 25 minutes 10 seconds look outta the window kid
+
+
+            %%remind <playername> in [(<days> (day | days))] [(<hours> (hour | hours))] [(<minutes> (minute | minutes))] [(<seconds> (second | seconds))] MESSAGE...
+        """
+        if not (await self.__is_nick_serv_identified(mask.nick)):
+            return
+
+        """Doesn't seem like docopt handles "at least one out of many" argument logic without it getting ugly
+         or at least I didn't figure out how to do it so going with a tad less ugly check"""
+        if not args.get('<seconds>') and not args.get('<minutes>') and not args.get('<hours>') and not args.get('<days>'):
+            return 'Invalid arguments.'
+
+        global REMINDER_RECEIVERS, REMINDER_DB_ACTION_LOCK
+        player_name = args.get('<playername>')
+        try:
+            time_before_reminding = {
+                'seconds': int(args.get('<seconds>', 0) or 0),
+                'minutes': int(args.get('<minutes>', 0) or 0),
+                'hours': int(args.get('<hours>', 0) or 0),
+                'days': int(args.get('<days>', 0) or 0)
+            }
+        except ValueError:
+            return 'Only whole numbers allowed.'
+        message = 'Reminder: ' + " ".join(args.get('MESSAGE'))
+        try:
+            with REMINDER_DB_ACTION_LOCK:
+                if self.reminder.reminders_arent_empty():
+                    self.reminder.refresh_with_new_reminder()
+                self.__db_add(['reminders', player_name], mask.nick,
+                              {'message': message, 'sender': mask.nick, 'time': str(time.strftime("%d-%m-%Y %H:%M:%S")),
+                              'when_to_remind': str(datetime.now() + timedelta(days=time_before_reminding['days'],
+                                                                               seconds=time_before_reminding['seconds'],
+                                                                               microseconds=0,
+                                                                               milliseconds=0,
+                                                                               minutes=time_before_reminding['minutes'],
+                                                                               hours=time_before_reminding['hours'],
+                                                                               weeks=0))},
+                                overwrite_if_exists=False, try_saving_with_new_key=True)
+                REMINDER_RECEIVERS[player_name] = True
+            return 'Reminder taken.'
+        except TypeError:
+            return 'Invalid arguments.'
+
+    @command(public=False, name='offlinemessage')
     async def offline_message(self, mask, target, args):
         """Store an offline message, it is delivered once the person logs on
 
@@ -321,7 +384,7 @@ class Plugin(object):
         if is_online:
             return "The player is online in " + channel + ", tell him yourself."
         self.__db_add(['offlinemessages', player_name], mask.nick,
-                      {'message': message, 'sender': mask.nick, 'time': str(time.strftime("%d.%m.%Y %H:%M:%S"))},
+                      {'message': message, 'sender': mask.nick, 'time': str(time.strftime("%d-%m-%Y %H:%M:%S"))},
                       overwrite_if_exists=False, try_saving_with_new_key=True)
         OFFLINE_MESSAGE_RECEIVERS[player_name] = True
         self.bot.privmsg(mask.nick,
@@ -383,6 +446,34 @@ class Plugin(object):
         else:
             prefix = '%s: ' % prefix
         self.bot.privmsg(channel, "%s%s" % (prefix, random.choice(taunt_table)))
+
+    def _try_to_remind(self, receiver, reminder):
+        with REMINDER_DB_ACTION_LOCK:
+            global REMINDER_RECEIVERS, OFFLINE_MESSAGE_RECEIVERS
+            if REMINDER_RECEIVERS.get(receiver, False):
+                message = self.__db_get(['reminders', receiver, reminder])
+                is_online, _ = self.__is_in_bot_channel(receiver)
+                if is_online:
+                    if self.__is_nick_serv_identified(receiver):
+                        self.bot.privmsg(receiver, '"{message}" - by {sender}, {time}'.format(**{
+                            'message': message.get('message', "<message>"),
+                            'sender': message.get('sender', "<sender>"),
+                            'time': message.get('time', "<time>")}),
+                            nowait=True)
+                        self.__db_del(['reminders', receiver], reminder)
+                else:
+                    self.__db_add(['offlinemessages', receiver], message.get('sender', "<sender>"),
+                                  {'message': message.get('message', "<message>"),
+                                  'sender': message.get('sender', "<sender>"),
+                                  'time': message.get('time', "<time>")},
+                                  overwrite_if_exists=False, try_saving_with_new_key=True)
+                    OFFLINE_MESSAGE_RECEIVERS[receiver] = True
+                    self.__db_del(['reminders', receiver], reminder)
+
+                reminders_left_for_this_receiver = list(self.__db_get(['reminders', receiver]).keys())
+                if not reminders_left_for_this_receiver:
+                    self.__db_del(['reminders'], receiver)
+                    del REMINDER_RECEIVERS[receiver]
 
     def _try_deliver_offline_messages(self, receiver):
         if OFFLINE_MESSAGE_RECEIVERS.get(receiver, False):
@@ -566,7 +657,6 @@ class Plugin(object):
 
     def __filter_for_players_in_channel(self, player_list, channel_name):
         players = {}
-        # TODO CHECK 'not var in' vs 'var not in'
         if channel_name not in self.bot.channels:
             return players
         channel = self.bot.channels[channel_name]

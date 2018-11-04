@@ -24,9 +24,11 @@ Install pip version 18.0:
 Install the package dependencies:
 
     windows:    pip install -r requirements.txt
+                pipenv run pip install --upgrade pip==18.0
                 pipenv install
 
     linux:      pip3 install -r requirements.txt
+                pipenv run pip3 install --upgrade pip==18.0
                 pipenv install
 
 
