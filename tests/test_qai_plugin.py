@@ -41,6 +41,7 @@ def test_iscoroutine():
         assert iscoroutine(QAI.flip(*command_arguments))
         assert iscoroutine(QAI.join(*command_arguments))
         assert iscoroutine(QAI.leave(*command_arguments))
+        assert iscoroutine(QAI.remind(*command_arguments))
         assert iscoroutine(QAI.offline_message(*command_arguments))
         assert iscoroutine(QAI.puppet(*command_arguments))
         assert iscoroutine(QAI.mode(*command_arguments))
