@@ -12,10 +12,12 @@ from urllib.parse import urlparse, parse_qs
 import threading
 import irc3
 from irc3.plugins.command import command
+from irc3.utils import IrcString
 
 from qai import repetition, challonge, slack, reminder_thread
 from qai.taunts import TAUNTS, SPAM_PROTECT_TAUNTS, KICK_TAUNTS
 from qai.links import LINKS, LINKS_SYNONYMES, WIKI_LINKS, WIKI_LINKS_SYNONYMES, OTHER_LINKS
+from qai.decorators import nickserv_identified, channel_only
 
 ALL_TAUNTS = []  # extended in init
 BAD_WORDS = {}
@@ -167,7 +169,8 @@ class Plugin(object):
             self.__handle_nick_serv_message(msg)
 
     @command(permission='admin', public=False)
-    async def hidden(self, mask, target, args):
+    @nickserv_identified
+    def hidden(self, mask, target, args):
         """Actually shows hidden commands
 
             %%hidden
@@ -179,38 +182,38 @@ class Plugin(object):
             self.bot.privmsg(mask.nick, "- " + word)
 
     @command(permission='admin')
-    async def taunt(self, mask, target, args):
+    @channel_only
+    @nickserv_identified
+    def taunt(self, mask, target, args):
         """Send a taunt
 
             %%taunt
             %%taunt <person>
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         p = args.get('<person>')
         if p == self.bot.config['nick']:
             p = mask.nick
         self._taunt(channel=target, prefix=p, taunt_table=TAUNTS)
 
     @command(permission='admin')
-    async def explode(self, mask, target, args):
+    @channel_only
+    @nickserv_identified
+    def explode(self, mask, target, args):
         """Explode
 
             %%explode
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         self.bot.action(target, "explodes")
 
     @command(permission='admin')
-    async def hug(self, mask, target, args):
+    @channel_only
+    @nickserv_identified
+    def hug(self, mask, target, args):
         """Hug someone
 
             %%hug
             %%hug <someone>
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         someone = args['<someone>']
         if someone is None:
             someone = mask.nick
@@ -220,34 +223,32 @@ class Plugin(object):
         self.bot.action(target, "hugs " + someone)
 
     @command(permission='admin')
-    async def flip(self, mask, target, args):
+    @channel_only
+    @nickserv_identified
+    def flip(self, mask, target, args):
         """Flip table
 
             %%flip
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         self.bot.privmsg(target, "(╯°□°）╯︵ ┻━┻")
 
     @command(permission='admin', show_in_help_list=False)
-    async def join(self, mask, target, args):
+    @nickserv_identified
+    def join(self, mask, target, args):
         """Overtake the given channel
 
             %%join <channel>
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         self.bot.join(args['<channel>'])
 
     @command(permission='admin', show_in_help_list=False)
-    async def leave(self, mask, target, args):
+    @nickserv_identified
+    def leave(self, mask, target, args):
         """Leave the given channel
 
             %%leave
             %%leave <channel>
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         channel = args['<channel>']
         if channel is None:
             channel = target
@@ -320,7 +321,8 @@ class Plugin(object):
 
     #TODO get rid of mandatory argument order
     @command
-    async def remind(self, mask, target, args):
+    @nickserv_identified
+    def remind(self, mask, target, args):
         """Have the bot deliver a message after specified time.
            Each time argument is optional but must provide at least one.
            The order of arguments must be preserved.
@@ -329,9 +331,8 @@ class Plugin(object):
 
             %%remind <playername> in [(<days> (day | days))] [(<hours> (hour | hours))] [(<minutes> (minute | minutes))] [(<seconds> (second | seconds))] MESSAGE...
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
+        if self.spam_protect('remind', mask, target, args):
             return
-
         """Doesn't seem like docopt handles "at least one out of many" argument logic without it getting ugly
          or at least I didn't figure out how to do it so going with a tad less ugly check"""
         if not args.get('<seconds>') and not args.get('<minutes>') and not args.get('<hours>') and not args.get('<days>'):
@@ -369,13 +370,12 @@ class Plugin(object):
             return 'Invalid arguments.'
 
     @command(public=False, name='offlinemessage')
-    async def offline_message(self, mask, target, args):
+    @nickserv_identified
+    def offline_message(self, mask, target, args):
         """Store an offline message, it is delivered once the person logs on
 
             %%offlinemessage <playername> WORDS ...
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         player_name, message = args.get('<playername>'), " ".join(args.get('WORDS'))
         if mask.nick == player_name:
             self._taunt(mask.nick)
@@ -391,19 +391,18 @@ class Plugin(object):
                          "The message is saved and will be delivered once " + player_name + " is online again.")
 
     @command(permission='admin', public=False, show_in_help_list=False)
-    async def puppet(self, mask, target, args):
+    @nickserv_identified
+    def puppet(self, mask, target, args):
         """Puppet
 
             %%puppet <target> WORDS ...
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         t = args.get('<target>')
         m = " ".join(args.get('WORDS'))
         self.bot.privmsg(t, m)
 
     @command(permission='admin', public=False, show_in_help_list=False)
-    async def mode(self, mask, target, args):
+    def mode(self, mask, target, args):
         """mode
 
             %%mode <channel> <mode> <nick>
@@ -417,25 +416,25 @@ class Plugin(object):
         ), nowait=True)
 
     @command(permission='admin', public=False, show_in_help_list=False)
-    async def reload(self, mask, target, args):
+    @nickserv_identified
+    def reload(self, mask, target, args):
         """Reboot the mainframe
 
             %%reload
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         self.bot.reload(self.bot.config['nick'])
 
     @command(permission='admin')
-    async def slap(self, mask, target, args):
+    @channel_only
+    @nickserv_identified
+    def slap(self, mask, target, args):
         """Slap this guy
 
             %%slap <guy>
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         self.bot.action(target, "slaps %s " % args['<guy>'])
 
+    #TODO fix for pm too
     def _taunt(self, channel=None, prefix=None, taunt_table=None):
         if channel is None:
             channel = "#qai_channel"
@@ -594,6 +593,7 @@ class Plugin(object):
             pass
         self.bot.action(target, "Find more here: {}".format(YOUTUBE_NON_API_SEARCH_LINK))
 
+    #TODO move to decorators?
     def spam_protect(self, cmd, mask, target, args, no_penalty=False):
         # TODO 'not cmd in' vs 'cmd not in' what was intention?
         if cmd not in self.timers:
@@ -655,6 +655,10 @@ class Plugin(object):
             return True
         return False
 
+    @staticmethod
+    def _is_a_channel(channel):
+        return IrcString(channel).is_channel
+
     def __filter_for_players_in_channel(self, player_list, channel_name):
         players = {}
         if channel_name not in self.bot.channels:
@@ -689,13 +693,13 @@ class Plugin(object):
             self.bot.privmsg(target, "Nobody is streaming :'(")
 
     @command
+    @channel_only
+    @nickserv_identified
     async def groupping(self, mask, target, args):
         """Pings people in this group
 
             %%groupping <groupname>
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         group_name = args.get('<groupname>')
         player_groups = self.__db_get(['groups', 'playergroups'])
         if not player_groups.get(group_name):
@@ -711,15 +715,14 @@ class Plugin(object):
         self.bot.privmsg(target, ", ".join(player_list))
 
     @command(public=False)
-    async def group(self, mask, target, args):
+    @nickserv_identified
+    def group(self, mask, target, args):
         """Allows joining and leaving ping groups
 
             %%group get
             %%group join <groupname>
             %%group leave <groupname>
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         get, join, leave, group_name = args.get('get'), args.get('join'), args.get('leave'), args.get('<groupname>')
         player_groups = self.__db_get(['groups', 'playergroups'])
         if get:
@@ -747,7 +750,8 @@ class Plugin(object):
         return "Done."
 
     @command(permission='admin', public=False, show_in_help_list=False)
-    async def group_manage(self, mask, target, args):
+    @nickserv_identified
+    def group_manage(self, mask, target, args):
         """Allows admins to manage groups
 
             %%groupmanage get
@@ -756,8 +760,6 @@ class Plugin(object):
             %%groupmanage join <groupname> <playername>
             %%groupmanage leave <groupname> <playername>
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         get, add, delete, join, leave, group_name, player_name, text = args.get('get'), args.get('add'), args.get(
             'del'), args.get('join'), args.get('leave'), args.get('<groupname>'), args.get('<playername>'), " ".join(
             args.get('TEXT'))
@@ -794,15 +796,14 @@ class Plugin(object):
         return "Done."
 
     @command(permission='admin', public=False, show_in_help_list=False)
-    async def blacklist(self, mask, target, args):
+    @nickserv_identified
+    def blacklist(self, mask, target, args):
         """Blacklist given channel/user from !casts, !streams
 
             %%blacklist get
             %%blacklist add USER ...
             %%blacklist del USER ...
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         add, delete, get, user = args.get('add'), args.get('del'), args.get('get'), " ".join(args.get('USER'))
         if get:
             for user in self.__db_get(['blacklist', 'users']).keys():
@@ -821,15 +822,14 @@ class Plugin(object):
         return "Something went wrong."
 
     @command(permission='admin', public=False, show_in_help_list=False)
-    async def bad_words(self, mask, target, args):
+    @nickserv_identified
+    def bad_words(self, mask, target, args):
         """Adds/removes a given keyword from the checklist
 
             %%badwords get
             %%badwords add <word> <gravity>
             %%badwords del <word>
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         global BAD_WORDS
         add, delete, get, word, gravity = args.get('add'), args.get('del'), args.get('get'), args.get(
             '<word>'), args.get('<gravity>')
@@ -858,7 +858,7 @@ class Plugin(object):
                 self.bot.privmsg(mask.nick, '- word: "%s", gravity: %s' % (word, words[word]))
 
     @command
-    async def rwords(self, mask, target, args):
+    def rwords(self, mask, target, args):
         """Prints the list of checked reactionwords
 
             %%rwords
@@ -868,7 +868,8 @@ class Plugin(object):
         self.bot.privmsg(target, "Checked reaction words: " + ", ".join(REACTION_WORDS.keys()))
 
     @command(permission='admin', public=False, show_in_help_list=False)
-    async def reaction_words(self, mask, target, args):
+    @nickserv_identified
+    def reaction_words(self, mask, target, args):
         """Adds/removes a given keyword from the checklist.
         "{sender}" in the reply text will be replaced by the name of the person who triggered the response.
 
@@ -876,8 +877,6 @@ class Plugin(object):
             %%reactionwords add <word> REPLY ...
             %%reactionwords del <word>
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         global REACTION_WORDS
         add, delete, get, word, reply = args.get('add'), args.get('del'), args.get('get'), args.get('<word>'), " ".join(
             args.get('REPLY'))
@@ -906,15 +905,14 @@ class Plugin(object):
                 self.bot.privmsg(mask.nick, '- word: "%s", reply: %s' % (word, words[word]))
 
     @command(permission='admin', public=False, show_in_help_list=False)
-    async def repeat(self, mask, target, args):
+    @nickserv_identified
+    def repeat(self, mask, target, args):
         """Makes QAI repeat WORDS in <channel> each <seconds>. Use <ID> to remove them again.
 
             %%repeat get
             %%repeat add <ID> <seconds> <channel> WORDS ...
             %%repeat del <ID>
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         global REPETITIONS
         # TODO Check if id_player could be named better and if words works in lowercase.
         add, delete, get, id_player, seconds, channel, words = args.get('add'), args.get('del'), args.get(
@@ -954,19 +952,19 @@ class Plugin(object):
                 return "Failed deleting."
 
     @command(permission='chatlist', show_in_help_list=False)
-    async def move(self, mask, target, args):
+    @nickserv_identified
+    def move(self, mask, target, args):
         """Move nick into channel
 
             %%move <nick> <channel>
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         channel, nick = args.get('<channel>'), args.get('<nick>')
         self.move_user(channel, nick)
         self.bot.privmsg(mask.nick, "OK moved %s to %s" % (nick, channel))
 
     @command(permission='chatlist', show_in_help_list=False)
-    async def chat_list(self, mask, target, args):
+    @nickserv_identified
+    def chat_list(self, mask, target, args):
         """Chat lists
 
             %%chatlist
@@ -974,8 +972,6 @@ class Plugin(object):
             %%chatlist add <channel> <user>
             %%chatlist del <channel> <user>
         """
-        if not (await self.__is_nick_serv_identified(mask.nick)):
-            return
         channel, user, add, remove = args.get('<channel>'), args.get('<user>'), args.get('add'), args.get('del')
         if not add and not remove:
             if not channel:
