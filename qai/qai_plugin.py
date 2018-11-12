@@ -181,6 +181,16 @@ class Plugin(object):
         for word in words:
             self.bot.privmsg(mask.nick, "- " + word)
 
+    @command
+    @channel_only
+    @nickserv_identified
+    def roll(self, mask, target, args):
+        """Roll a random number between 0 and 100
+
+            %%roll
+        """
+        return f'{mask.nick} rolls {random.randint(0, 100)}!'
+
     @command(permission='admin')
     @channel_only
     @nickserv_identified
