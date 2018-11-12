@@ -271,13 +271,13 @@ class Plugin(object):
             %%link <argument> WORDS...
         """
         try:
-            self.bot.privmsg(target, LINKS_SYNONYMES[args['<argument>']])
+            self.pm_fix(mask, target, LINKS_SYNONYMES[args['<argument>']])
             return
         except Exception as ex:
             pass
 
         try:
-            self.bot.privmsg(target, LINKS[args['<argument>']])
+            self.pm_fix(mask, target, LINKS[args['<argument>']])
         except Exception as ex:
             if self.spam_protect('links', mask, target, args):
                 return
@@ -286,7 +286,7 @@ class Plugin(object):
             if not args['<argument>'] is None:
                 msg = "Unknown link: \"" + args['<argument>'] + "\". "
             msg += "Do you mean one of these: " + " / ".join(LINKS.keys()) + " ?"
-            self.bot.privmsg(target, msg)
+            self.pm_fix(mask, target, msg)
 
     @command
     def wiki(self, mask, target, args):
@@ -297,13 +297,13 @@ class Plugin(object):
             %%wiki <argument> WORDS...
         """
         try:
-            self.bot.privmsg(target, WIKI_LINKS_SYNONYMES[args['<argument>']])
+            self.pm_fix(mask, target, WIKI_LINKS_SYNONYMES[args['<argument>']])
             return
         except Exception as ex:
             pass
 
         try:
-            self.bot.privmsg(target, WIKI_LINKS[args['<argument>']])
+            self.pm_fix(mask, target, WIKI_LINKS[args['<argument>']])
         except Exception as ex:
             if self.spam_protect('wiki', mask, target, args):
                 return
@@ -317,7 +317,7 @@ class Plugin(object):
             msg += " / ".join(WIKI_LINKS.keys())
             if not args['<argument>'] is None:
                 msg += " ?"
-            self.bot.privmsg(target, msg)
+            self.pm_fix(mask, target, msg)
 
     #TODO get rid of mandatory argument order
     @command
@@ -574,7 +574,7 @@ class Plugin(object):
                 if channel_title not in self.__db_get(['blacklist', 'users']) and channel_title != '':
                     casts.append(item)
                     try:
-                        self.bot.action(target,
+                        self.pm_fix(mask, target,
                                         "{channel}: {title} - {date}: {link}".format(
                                             **{
                                                 "id": item['id']['videoId'],
@@ -586,12 +586,22 @@ class Plugin(object):
                                                                                     self.bot.config[
                                                                                         'youtube_time_fmt'])),
                                                 "link": "http://youtu.be/{}".format(item['id']['videoId'])
-                                            }))
+                                            }),
+                                    action=True)
                     except (KeyError, ValueError) as ex:
                         pass
         except KeyError:
             pass
-        self.bot.action(target, "Find more here: {}".format(YOUTUBE_NON_API_SEARCH_LINK))
+        self.pm_fix(mask, target, "Find more here: {}".format(YOUTUBE_NON_API_SEARCH_LINK), action=True)
+
+    def pm_fix(self, mask, target, message, action=False, nowait=False):
+        """Fixes bot PMing itself instead of the user if privmsg is called by user in PM instead of a channel."""
+        if target == self.bot.config['username']:
+            target = mask.nick
+        if action is False:
+            return self.bot.privmsg(target, message, nowait=nowait)
+        else:
+            return self.bot.action(target, message)
 
     #TODO move to decorators?
     def spam_protect(self, cmd, mask, target, args, no_penalty=False):
@@ -686,11 +696,11 @@ class Plugin(object):
                 streams.remove(stream)
 
         if len(streams) > 0:
-            self.bot.privmsg(target, "%i streams online:" % len(streams))
+            self.pm_fix(mask, target, "%i streams online:" % len(streams))
             for stream in streams:
-                self.bot.action(target, stream['text'])
+                self.pm_fix(mask, target, stream['text'], action=True)
         else:
-            self.bot.privmsg(target, "Nobody is streaming :'(")
+            self.pm_fix(mask, target, "Nobody is streaming :'(")
 
     @command
     @channel_only
@@ -865,7 +875,7 @@ class Plugin(object):
         """
         if self.spam_protect('rwords', mask, target, args):
             return
-        self.bot.privmsg(target, "Checked reaction words: " + ", ".join(REACTION_WORDS.keys()))
+        self.pm_fix(mask, target, "Checked reaction words: " + ", ".join(REACTION_WORDS.keys()))
 
     @command(permission='admin', public=False, show_in_help_list=False)
     @nickserv_identified
@@ -995,7 +1005,7 @@ class Plugin(object):
             %%google WORDS ...
         """
         link = LET_ME_GOOGLE_IT_FOR_YOU + "+".join(args.get('WORDS'))
-        self.bot.privmsg(target, link)
+        self.pm_fix(mask, target, link)
 
     @command
     def name(self, mask, target, args):
@@ -1007,10 +1017,10 @@ class Plugin(object):
         """
         name = args.get('<username>')
         if name is None:
-            self.bot.privmsg(target, LINKS["namechange"])
+            self.pm_fix(mask, target, LINKS["namechange"])
             return
         link = OTHER_LINKS["oldnames"] + name
-        self.bot.privmsg(target, link)
+        self.pm_fix(mask, target, link)
 
     @command
     async def tournaments(self, mask, target, args):
@@ -1032,7 +1042,7 @@ class Plugin(object):
         # TODO Why is got None a problem here?
         tourneys = await challonge.printable_tourney_list()
         if len(tourneys) < 1:
-            self.bot.privmsg(target, "No tourneys found!")
+            self.pm_fix(mask, target, "No tourneys found!")
 
         self.bot.privmsg(target, str(len(tourneys)) + " tourneys:")
         for tourney in tourneys:
