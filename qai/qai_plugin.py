@@ -606,7 +606,7 @@ class Plugin(object):
 
     def pm_fix(self, mask, target, message, action=False, nowait=False):
         """Fixes bot PMing itself instead of the user if privmsg is called by user in PM instead of a channel."""
-        if target == self.bot.config['username']:
+        if target == self.bot.config['nick']:
             target = mask.nick
         if action is False:
             return self.bot.privmsg(target, message, nowait=nowait)
