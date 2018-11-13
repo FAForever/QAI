@@ -17,6 +17,7 @@ from irc3.utils import IrcString
 from qai import repetition, challonge, slack, reminder_thread
 from qai.taunts import TAUNTS, SPAM_PROTECT_TAUNTS, KICK_TAUNTS
 from qai.links import LINKS, LINKS_SYNONYMES, WIKI_LINKS, WIKI_LINKS_SYNONYMES, OTHER_LINKS
+from qai.eight_ball_phrases import BALL_PHRASES
 from qai.decorators import nickserv_identified, channel_only
 
 ALL_TAUNTS = []  # extended in init
@@ -190,6 +191,18 @@ class Plugin(object):
             %%roll
         """
         return f'{mask.nick} rolls {random.randint(0, 100)}!'
+
+    @command(name='8ball')
+    @channel_only
+    @nickserv_identified
+    def eight_ball(self, mask, target, args):
+        """Ask the mysterious 8ball a question.
+
+            %%8ball WORDS ...
+        """
+        if self.spam_protect('8ball', mask, target, args):
+                return
+        return f'{random.choice(BALL_PHRASES)}'
 
     @command(permission='admin')
     @channel_only
