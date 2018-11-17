@@ -201,7 +201,7 @@ class Plugin(object):
             %%8ball WORDS ...
         """
         if self.spam_protect('8ball', mask, target, args):
-                return
+            return
         return f'{random.choice(BALL_PHRASES)}'
 
     @command(permission='admin')
