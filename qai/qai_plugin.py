@@ -363,6 +363,8 @@ class Plugin(object):
 
         global REMINDER_RECEIVERS, REMINDER_DB_ACTION_LOCK
         player_name = args.get('<playername>')
+        if not self._is_a_nickname(player_name):
+            return 'Invalid nickname.'
         try:
             time_before_reminding = {
                 'seconds': int(args.get('<seconds>', 0) or 0),
@@ -428,6 +430,8 @@ class Plugin(object):
             %%offlinemessage <playername> WORDS ...
         """
         player_name, message = args.get('<playername>'), " ".join(args.get('WORDS'))
+        if not self._is_a_nickname(player_name):
+            return 'Invalid nickname.'
         if mask.nick == player_name:
             self._taunt(mask.nick)
             return
