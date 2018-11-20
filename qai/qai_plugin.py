@@ -201,7 +201,7 @@ class Plugin(object):
             %%8ball WORDS ...
         """
         if self.spam_protect('8ball', mask, target, args):
-                return
+            return
         return f'{random.choice(BALL_PHRASES)}'
 
     @command(permission='admin')
@@ -363,6 +363,8 @@ class Plugin(object):
 
         global REMINDER_RECEIVERS, REMINDER_DB_ACTION_LOCK
         player_name = args.get('<playername>')
+        if not self._is_a_nickname(player_name):
+            return 'Invalid nickname.'
         try:
             time_before_reminding = {
                 'seconds': int(args.get('<seconds>', 0) or 0),
@@ -392,6 +394,34 @@ class Plugin(object):
         except TypeError:
             return 'Invalid arguments.'
 
+    def _try_to_remind(self, receiver, reminder):
+        with REMINDER_DB_ACTION_LOCK:
+            global REMINDER_RECEIVERS, OFFLINE_MESSAGE_RECEIVERS
+            if REMINDER_RECEIVERS.get(receiver, False):
+                message = self.__db_get(['reminders', receiver, reminder])
+                is_online, _ = self.__is_in_bot_channel(receiver)
+                if is_online:
+                    if self.__is_nick_serv_identified(receiver):
+                        self.bot.privmsg(receiver, '"{message}" - by {sender}, {time}'.format(**{
+                            'message': message.get('message', "<message>"),
+                            'sender': message.get('sender', "<sender>"),
+                            'time': message.get('time', "<time>")}),
+                            nowait=True)
+                        self.__db_del(['reminders', receiver], reminder)
+                else:
+                    self.__db_add(['offlinemessages', receiver], message.get('sender', "<sender>"),
+                                  {'message': message.get('message', "<message>"),
+                                  'sender': message.get('sender', "<sender>"),
+                                  'time': message.get('time', "<time>")},
+                                  overwrite_if_exists=False, try_saving_with_new_key=True)
+                    OFFLINE_MESSAGE_RECEIVERS[receiver] = True
+                    self.__db_del(['reminders', receiver], reminder)
+
+                reminders_left_for_this_receiver = list(self.__db_get(['reminders', receiver]).keys())
+                if not reminders_left_for_this_receiver:
+                    self.__db_del(['reminders'], receiver)
+                    del REMINDER_RECEIVERS[receiver]
+
     @command(public=False, name='offlinemessage')
     @nickserv_identified
     def offline_message(self, mask, target, args):
@@ -400,6 +430,8 @@ class Plugin(object):
             %%offlinemessage <playername> WORDS ...
         """
         player_name, message = args.get('<playername>'), " ".join(args.get('WORDS'))
+        if not self._is_a_nickname(player_name):
+            return 'Invalid nickname.'
         if mask.nick == player_name:
             self._taunt(mask.nick)
             return
@@ -412,6 +444,21 @@ class Plugin(object):
         OFFLINE_MESSAGE_RECEIVERS[player_name] = True
         self.bot.privmsg(mask.nick,
                          "The message is saved and will be delivered once " + player_name + " is online again.")
+
+    def _try_deliver_offline_messages(self, receiver):
+        if OFFLINE_MESSAGE_RECEIVERS.get(receiver, False):
+            is_online, _ = self.__is_in_bot_channel(receiver)
+            if is_online:
+                if self.__is_nick_serv_identified(receiver):
+                    messages = self.__db_get(['offlinemessages', receiver]).values()
+                    for m in messages:
+                        self.bot.privmsg(receiver, '"{message}" - Sent by {sender}, {time}'.format(**{
+                            'message': m.get('message', "<message>"),
+                            'sender': m.get('sender', "<sender>"),
+                            'time': m.get('time', "<time>"),
+                        }))
+                    del OFFLINE_MESSAGE_RECEIVERS[receiver]
+                    self.__db_del(['offlinemessages'], receiver)
 
     @command(permission='admin', public=False, show_in_help_list=False)
     @nickserv_identified
@@ -469,48 +516,28 @@ class Plugin(object):
             prefix = '%s: ' % prefix
         self.bot.privmsg(channel, "%s%s" % (prefix, random.choice(taunt_table)))
 
-    def _try_to_remind(self, receiver, reminder):
-        with REMINDER_DB_ACTION_LOCK:
-            global REMINDER_RECEIVERS, OFFLINE_MESSAGE_RECEIVERS
-            if REMINDER_RECEIVERS.get(receiver, False):
-                message = self.__db_get(['reminders', receiver, reminder])
-                is_online, _ = self.__is_in_bot_channel(receiver)
-                if is_online:
-                    if self.__is_nick_serv_identified(receiver):
-                        self.bot.privmsg(receiver, '"{message}" - by {sender}, {time}'.format(**{
-                            'message': message.get('message', "<message>"),
-                            'sender': message.get('sender', "<sender>"),
-                            'time': message.get('time', "<time>")}),
-                            nowait=True)
-                        self.__db_del(['reminders', receiver], reminder)
-                else:
-                    self.__db_add(['offlinemessages', receiver], message.get('sender', "<sender>"),
-                                  {'message': message.get('message', "<message>"),
-                                  'sender': message.get('sender', "<sender>"),
-                                  'time': message.get('time', "<time>")},
-                                  overwrite_if_exists=False, try_saving_with_new_key=True)
-                    OFFLINE_MESSAGE_RECEIVERS[receiver] = True
-                    self.__db_del(['reminders', receiver], reminder)
+    @command
+    async def streams(self, mask, target, args):
+        """List current live streams
 
-                reminders_left_for_this_receiver = list(self.__db_get(['reminders', receiver]).keys())
-                if not reminders_left_for_this_receiver:
-                    self.__db_del(['reminders'], receiver)
-                    del REMINDER_RECEIVERS[receiver]
+            %%streams
+        """
+        if self.spam_protect('streams', mask, target, args):
+            return
+        streams = await self.hitbox_streams()
+        streams.extend((await self.twitch_streams()))
+        streams.extend((await self.youtube_streams()))
+        blacklist = self.__db_get(['blacklist', 'users'])
+        for stream in streams:
+            if stream["channel"] in blacklist:
+                streams.remove(stream)
 
-    def _try_deliver_offline_messages(self, receiver):
-        if OFFLINE_MESSAGE_RECEIVERS.get(receiver, False):
-            is_online, _ = self.__is_in_bot_channel(receiver)
-            if is_online:
-                if self.__is_nick_serv_identified(receiver):
-                    messages = self.__db_get(['offlinemessages', receiver]).values()
-                    for m in messages:
-                        self.bot.privmsg(receiver, '"{message}" - Sent by {sender}, {time}'.format(**{
-                            'message': m.get('message', "<message>"),
-                            'sender': m.get('sender', "<sender>"),
-                            'time': m.get('time', "<time>"),
-                        }))
-                    del OFFLINE_MESSAGE_RECEIVERS[receiver]
-                    self.__db_del(['offlinemessages'], receiver)
+        if len(streams) > 0:
+            self.pm_fix(mask, target, "%i streams online:" % len(streams))
+            for stream in streams:
+                self.pm_fix(mask, target, stream['text'], action=True)
+        else:
+            self.pm_fix(mask, target, "Nobody is streaming :'(")
 
     async def hitbox_streams(self):
         async with aiohttp.request('GET', HIT_BOX_STREAMS) as req:
@@ -616,114 +643,6 @@ class Plugin(object):
         except KeyError:
             pass
         self.pm_fix(mask, target, "Find more here: {}".format(YOUTUBE_NON_API_SEARCH_LINK), action=True)
-
-    def pm_fix(self, mask, target, message, action=False, nowait=False):
-        """Fixes bot PMing itself instead of the user if privmsg is called by user in PM instead of a channel."""
-        if target == self.bot.config['nick']:
-            target = mask.nick
-        if action is False:
-            return self.bot.privmsg(target, message, nowait=nowait)
-        else:
-            return self.bot.action(target, message)
-
-    #TODO move to decorators?
-    def spam_protect(self, cmd, mask, target, args, no_penalty=False):
-        # TODO 'not cmd in' vs 'cmd not in' what was intention?
-        if cmd not in self.timers:
-            self.timers[cmd] = {}
-        if target not in self.timers[cmd]:
-            self.timers[cmd][target] = 0
-        if time.time() - self.timers[cmd][target] <= self.bot.config['spam_protect_time']:
-            if no_penalty:
-                return True
-            try:
-                self._rage[mask.nick] += 1
-            except Exception as ex:
-                self._rage[mask.nick] = 1
-
-            if self._rage[mask.nick] >= self.bot.config['rage_to_kick']:
-                self._taunt(channel=target, prefix=mask.nick, taunt_table=KICK_TAUNTS)
-                self.bot.privmsg(target, "!kick {}".format(mask.nick))
-                self._rage[mask.nick] = 1
-            else:
-                self._taunt(channel=target, prefix=mask.nick, taunt_table=SPAM_PROTECT_TAUNTS)
-            return True
-        self._rage = {}
-        self.timers[cmd][target] = time.time()
-
-    @staticmethod
-    def __handle_nick_serv_message(message):
-        if message.startswith('STATUS'):
-            words = message.split(" ")
-            global NICK_SERV_IDENTIFIED_RESPONSES, NICK_SERV_IDENTIFIED_RESPONSES_LOCK
-            NICK_SERV_IDENTIFIED_RESPONSES_LOCK.acquire()
-            NICK_SERV_IDENTIFIED_RESPONSES[words[1]] = words[2]
-            NICK_SERV_IDENTIFIED_RESPONSES_LOCK.release()
-
-    async def __is_nick_serv_identified(self, nick):
-        self.bot.privmsg('nickserv', "status {}".format(nick))
-        remaining_tries = 20
-        while remaining_tries > 0:
-            if NICK_SERV_IDENTIFIED_RESPONSES.get(nick):
-                value = NICK_SERV_IDENTIFIED_RESPONSES[nick]
-                NICK_SERV_IDENTIFIED_RESPONSES_LOCK.acquire()
-                del NICK_SERV_IDENTIFIED_RESPONSES[nick]
-                NICK_SERV_IDENTIFIED_RESPONSES_LOCK.release()
-                if int(value) == 3:
-                    return True
-                return False
-            remaining_tries -= 1
-            await asyncio.sleep(0.1)
-        return False
-
-    def __is_in_bot_channel(self, player):
-        for channel in self.bot.channels:
-            if self.__is_in_channel(player, self.bot.channels[channel]):
-                return True, channel
-        return False, ""
-
-    @staticmethod
-    def __is_in_channel(player, channel):
-        if player in channel:
-            return True
-        return False
-
-    @staticmethod
-    def _is_a_channel(channel):
-        return IrcString(channel).is_channel
-
-    def __filter_for_players_in_channel(self, player_list, channel_name):
-        players = {}
-        if channel_name not in self.bot.channels:
-            return players
-        channel = self.bot.channels[channel_name]
-        for p in player_list.keys():
-            if self.__is_in_channel(p, channel):
-                players[p] = True
-        return players
-
-    @command
-    async def streams(self, mask, target, args):
-        """List current live streams
-
-            %%streams
-        """
-        if self.spam_protect('streams', mask, target, args):
-            return
-        streams = await self.hitbox_streams()
-        streams.extend((await self.twitch_streams()))
-        streams.extend((await self.youtube_streams()))
-        blacklist = self.__db_get(['blacklist', 'users'])
-        for stream in streams:
-            if stream["channel"] in blacklist:
-                streams.remove(stream)
-
-        if len(streams) > 0:
-            self.pm_fix(mask, target, "%i streams online:" % len(streams))
-            for stream in streams:
-                self.pm_fix(mask, target, stream['text'], action=True)
-        else:
-            self.pm_fix(mask, target, "Nobody is streaming :'(")
 
     @command
     @channel_only
@@ -1088,6 +1007,95 @@ class Plugin(object):
         if gravity >= self.bot.config['report_instant_kick_threshold']:
             self._taunt(channel=channel, prefix=name, taunt_table=KICK_TAUNTS)
             self.bot.privmsg(channel, "!kick {}".format(name))
+
+    def pm_fix(self, mask, target, message, action=False, nowait=False):
+        """Fixes bot PMing itself instead of the user if privmsg is called by user in PM instead of a channel."""
+        if target == self.bot.config['nick']:
+            target = mask.nick
+        if action is False:
+            return self.bot.privmsg(target, message, nowait=nowait)
+        else:
+            return self.bot.action(target, message)
+
+    #TODO move to decorators?
+    def spam_protect(self, cmd, mask, target, args, no_penalty=False):
+        # TODO 'not cmd in' vs 'cmd not in' what was intention?
+        if cmd not in self.timers:
+            self.timers[cmd] = {}
+        if target not in self.timers[cmd]:
+            self.timers[cmd][target] = 0
+        if time.time() - self.timers[cmd][target] <= self.bot.config['spam_protect_time']:
+            if no_penalty:
+                return True
+            try:
+                self._rage[mask.nick] += 1
+            except Exception as ex:
+                self._rage[mask.nick] = 1
+
+            if self._rage[mask.nick] >= self.bot.config['rage_to_kick']:
+                self._taunt(channel=target, prefix=mask.nick, taunt_table=KICK_TAUNTS)
+                self.bot.privmsg(target, "!kick {}".format(mask.nick))
+                self._rage[mask.nick] = 1
+            else:
+                self._taunt(channel=target, prefix=mask.nick, taunt_table=SPAM_PROTECT_TAUNTS)
+            return True
+        self._rage = {}
+        self.timers[cmd][target] = time.time()
+
+    @staticmethod
+    def __handle_nick_serv_message(message):
+        if message.startswith('STATUS'):
+            words = message.split(" ")
+            global NICK_SERV_IDENTIFIED_RESPONSES, NICK_SERV_IDENTIFIED_RESPONSES_LOCK
+            NICK_SERV_IDENTIFIED_RESPONSES_LOCK.acquire()
+            NICK_SERV_IDENTIFIED_RESPONSES[words[1]] = words[2]
+            NICK_SERV_IDENTIFIED_RESPONSES_LOCK.release()
+
+    async def __is_nick_serv_identified(self, nick):
+        self.bot.privmsg('nickserv', "status {}".format(nick))
+        remaining_tries = 20
+        while remaining_tries > 0:
+            if NICK_SERV_IDENTIFIED_RESPONSES.get(nick):
+                value = NICK_SERV_IDENTIFIED_RESPONSES[nick]
+                NICK_SERV_IDENTIFIED_RESPONSES_LOCK.acquire()
+                del NICK_SERV_IDENTIFIED_RESPONSES[nick]
+                NICK_SERV_IDENTIFIED_RESPONSES_LOCK.release()
+                if int(value) == 3:
+                    return True
+                return False
+            remaining_tries -= 1
+            await asyncio.sleep(0.1)
+        return False
+
+    def __is_in_bot_channel(self, player):
+        for channel in self.bot.channels:
+            if self.__is_in_channel(player, self.bot.channels[channel]):
+                return True, channel
+        return False, ""
+
+    @staticmethod
+    def __is_in_channel(player, channel):
+        if player in channel:
+            return True
+        return False
+
+    @staticmethod
+    def _is_a_channel(channel):
+        return IrcString(channel).is_channel
+
+    @staticmethod
+    def _is_a_nickname(nickname):
+        return IrcString(nickname).is_nick
+
+    def __filter_for_players_in_channel(self, player_list, channel_name):
+        players = {}
+        if channel_name not in self.bot.channels:
+            return players
+        channel = self.bot.channels[channel_name]
+        for p in player_list.keys():
+            if self.__is_in_channel(p, channel):
+                players[p] = True
+        return players
 
     def __db_add(self, path, key, value, overwrite_if_exists=True, try_saving_with_new_key=False):
         cur = self.bot.db

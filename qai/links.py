@@ -5,6 +5,7 @@ LINKS = {
     "wiki":         "FAF Wiki! http://wiki.faforever.com/index.php?title=Main_Page",
     "news":         "What's new? http://www.faforever.com/news/",
     "dev":          "Tumblr Development Feed http://faforeverdevblog.tumblr.com/",
+    "discord":      "FAF Official Discord server discord.gg/hgvj6Af",
 
     "replay":       "Replay link: http://replay.faforever.com/ID",
     "unitsdb":      "Check out http://direct.faforever.com/faf/unitsDB/ and spooky.github.io/unitdb/#/",
